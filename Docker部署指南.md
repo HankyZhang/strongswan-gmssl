@@ -8,16 +8,31 @@
 
 ### Windows 系统
 
-1. **安装 Docker Desktop**
+1. **安装 WSL 2.0**（Docker Desktop 依赖项）
+   - **重要**: Docker Desktop 需要 WSL 2.0 支持
+   - 下载地址: https://github.com/microsoft/WSL/releases
+   - 参考 PR: https://github.com/microsoft/WSL/pull/13352
+   - 安装命令:
+     ```powershell
+     # 以管理员身份运行 PowerShell
+     wsl --install
+     
+     # 或手动安装
+     wsl --update
+     wsl --set-default-version 2
+     ```
+
+2. **安装 Docker Desktop**
    - 下载地址: https://www.docker.com/products/docker-desktop
    - 最低版本: Docker Desktop 4.0+
-   - 启用 WSL2 后端（推荐）
+   - ⚠️ **必须先安装 WSL 2.0**，否则 Docker Desktop 无法启动
+   - 安装后启用 WSL2 后端（Settings → General → Use WSL 2 based engine）
 
-2. **系统要求**
+3. **系统要求**
    - Windows 10 64-bit: Pro, Enterprise, or Education (Build 19041+)
    - Windows 11 64-bit: Home or Pro version 21H2+
    - 至少 4GB RAM
-   - 启用虚拟化（在 BIOS 中）
+   - 启用虚拟化（在 BIOS 中启用 Intel VT-x 或 AMD-V）
 
 ### Linux 系统
 
@@ -512,9 +527,11 @@ services:
 - [Docker 官方文档](https://docs.docker.com/)
 - [Docker Compose 文档](https://docs.docker.com/compose/)
 - [strongSwan 官方文档](https://docs.strongswan.org/)
+- [WSL2 官方发布页](https://github.com/microsoft/WSL/releases) - **Docker Desktop 必需依赖**
 - [WSL2 安装指南](https://docs.microsoft.com/en-us/windows/wsl/install)
+- [WSL2 PR #13352](https://github.com/microsoft/WSL/pull/13352) - Docker Desktop 集成支持
 
 ---
 
 **最后更新**: 2025-10-30  
-**适用版本**: strongSwan 5.9.6, Docker 24+
+**适用版本**: strongSwan 5.9.6, Docker 24+, WSL 2.0+
