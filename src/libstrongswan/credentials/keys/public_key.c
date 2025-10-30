@@ -21,16 +21,18 @@
 #include "public_key.h"
 #include "signature_params.h"
 
-ENUM(key_type_names, KEY_ANY, KEY_ED448,
+ENUM(key_type_names, KEY_ANY, KEY_BLISS,
 	"ANY",
 	"RSA",
 	"ECDSA",
 	"DSA",
 	"ED25519",
 	"ED448",
+	"SM2",
+	"BLISS",
 );
 
-ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_ED448,
+ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA3_512,
 	"UNKNOWN",
 	"RSA_EMSA_PKCS1_NULL",
 	"RSA_EMSA_PKCS1_MD5",
@@ -54,6 +56,13 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_ED448,
 	"ECDSA-521",
 	"ED25519",
 	"ED448",
+	"SM2_WITH_SM3",
+	"BLISS_WITH_SHA2_256",
+	"BLISS_WITH_SHA2_384",
+	"BLISS_WITH_SHA2_512",
+	"BLISS_WITH_SHA3_256",
+	"BLISS_WITH_SHA3_384",
+	"BLISS_WITH_SHA3_512",
 );
 
 ENUM(encryption_scheme_names, ENCRYPT_UNKNOWN, ENCRYPT_RSA_OAEP_SHA512,
