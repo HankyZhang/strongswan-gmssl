@@ -48,6 +48,8 @@ enum key_type_t {
 	KEY_ED25519 = 4,
 	/** Ed448   PureEdDSA instance as in RFC 8032 */
 	KEY_ED448   = 5,
+	/** Chinese SM2 elliptic curve */
+	KEY_SM2     = 6,
 };
 
 /**
@@ -109,6 +111,8 @@ enum signature_scheme_t {
 	SIGN_ED25519,
 	/** PureEdDSA on Curve448 as in RFC 8410                           */
 	SIGN_ED448,
+	/** Chinese SM2 with SM3 hash                                      */
+	SIGN_SM2_WITH_SM3,
 };
 
 /**
