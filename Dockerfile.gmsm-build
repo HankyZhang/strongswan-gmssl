@@ -1,0 +1,53 @@
+# Dockerfile for Building strongSwan with gmsm Plugin
+# 用于编译和验证 gmsm 插件
+FROM ubuntu:22.04
+
+LABEL maintainer="HankyZhang" \
+      description="strongSwan 5.9.6 with gmsm plugin build environment" \
+      version="dev"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 安装构建依赖
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    autoconf \
+    automake \
+    libtool \
+    pkg-config \
+    libssl-dev \
+    libgmp3-dev \
+    libpam0g-dev \
+    libsystemd-dev \
+    libcurl4-openssl-dev \
+    libcap-ng-dev \
+    gettext \
+    git \
+    wget \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# 编译安装 GmSSL 3.1.1
+RUN cd /tmp \
+    && wget https://github.com/guanzhi/GmSSL/archive/refs/tags/v3.1.1.tar.gz \
+    && tar -zxf v3.1.1.tar.gz \
+    && cd GmSSL-3.1.1 \
+    && mkdir build && cd build \
+    && cmake -DCMAKE_C_FLAGS="-std=gnu99" .. \
+    && make -j$(nproc) \
+    && make install \
+    && ldconfig \
+    && rm -rf /tmp/GmSSL-* /tmp/v3.1.1.tar.gz
+
+# 验证 GmSSL 安装
+RUN ls -lh /usr/local/lib/libgmssl.* && \
+    ldconfig -p | grep gmssl
+
+# 创建工作目录
+WORKDIR /workspace
+
+# 设置环境变量
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+CMD ["/bin/bash"]
