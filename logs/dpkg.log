@@ -1,0 +1,9 @@
+2025-10-30 05:56:45 startup archives unpack
+2025-10-30 05:56:45 install iputils-ping:amd64 <none> 3:20211215-1ubuntu0.1
+2025-10-30 05:56:45 status half-installed iputils-ping:amd64 3:20211215-1ubuntu0.1
+2025-10-30 05:56:45 status unpacked iputils-ping:amd64 3:20211215-1ubuntu0.1
+2025-10-30 05:56:45 startup packages configure
+2025-10-30 05:56:45 configure iputils-ping:amd64 3:20211215-1ubuntu0.1 <none>
+2025-10-30 05:56:45 status unpacked iputils-ping:amd64 3:20211215-1ubuntu0.1
+2025-10-30 05:56:45 status half-configured iputils-ping:amd64 3:20211215-1ubuntu0.1
+2025-10-30 05:56:45 status installed iputils-ping:amd64 3:20211215-1ubuntu0.1

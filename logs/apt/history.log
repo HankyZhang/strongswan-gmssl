@@ -1,0 +1,5 @@
+
+Start-Date: 2025-10-30  05:56:45
+Commandline: apt-get install -y -qq iputils-ping
+Install: iputils-ping:amd64 (3:20211215-1ubuntu0.1)
+End-Date: 2025-10-30  05:56:46
