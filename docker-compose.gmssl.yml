@@ -1,0 +1,49 @@
+services:
+  strongswan-gmssl:
+    build:
+      context: .
+      dockerfile: Dockerfile.gmssl
+    image: strongswan-gmssl:3.1.1
+    container_name: strongswan-gmssl
+    privileged: true
+    network_mode: host
+    
+    volumes:
+      - ./config/swanctl:/etc/swanctl
+      - ./logs:/var/log/strongswan
+    
+    environment:
+      - TZ=Asia/Shanghai
+      - GMSSL_ENABLED=1
+    
+    restart: unless-stopped
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  # 原有的 strongSwan 容器（可选）
+  strongswan-legacy:
+    image: strongswan-gmssl:5.9.6-ubuntu
+    container_name: strongswan-legacy
+    privileged: true
+    network_mode: host
+    profiles:
+      - legacy
+    
+    volumes:
+      - ./config/swanctl:/etc/swanctl
+      - ./logs:/var/log/strongswan
+    
+    environment:
+      - TZ=Asia/Shanghai
+    
+    restart: unless-stopped
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'

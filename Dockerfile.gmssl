@@ -1,0 +1,158 @@
+# ==============================================================================
+# Dockerfile for strongSwan with GmSSL (National Cryptographic Algorithms)
+# 支持国密算法: SM2/SM3/SM4
+# Base: Ubuntu 22.04
+# ==============================================================================
+
+FROM ubuntu:22.04
+
+LABEL maintainer="HankyZhang" \
+      description="strongSwan with GmSSL - National Cryptographic Algorithms Support" \
+      version="gmssl-3.1.1" \
+      algorithms="SM2,SM3,SM4,AES,SHA2"
+
+# 环境变量
+ENV DEBIAN_FRONTEND=noninteractive \
+    GMSSL_VERSION=3.1.1 \
+    STRONGSWAN_REPO=https://github.com/HankyZhang/strongswan-gmssl.git \
+    STRONGSWAN_BRANCH=master \
+    INSTALL_PREFIX=/usr/local
+
+# 安装依赖
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    autoconf \
+    automake \
+    libtool \
+    pkg-config \
+    libpam0g-dev \
+    libssl-dev \
+    libgmp3-dev \
+    libsystemd-dev \
+    libcurl4-openssl-dev \
+    libcap-ng-dev \
+    gettext \
+    iptables \
+    iproute2 \
+    net-tools \
+    vim \
+    iputils-ping \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 编译安装 GmSSL
+RUN cd /tmp \
+    && wget -q https://github.com/guanzhi/GmSSL/archive/refs/tags/v${GMSSL_VERSION}.tar.gz \
+        -O gmssl-${GMSSL_VERSION}.tar.gz \
+    && tar -zxf gmssl-${GMSSL_VERSION}.tar.gz \
+    && cd GmSSL-${GMSSL_VERSION} \
+    && mkdir -p build \
+    && cd build \
+    && cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
+             -DCMAKE_BUILD_TYPE=Release \
+             -DENABLE_SM2_PRIVATE=ON \
+             -DENABLE_SM3=ON \
+             -DENABLE_SM4=ON \
+             .. \
+    && make -j $(nproc) \
+    && make install \
+    && ldconfig \
+    && rm -rf /tmp/GmSSL-${GMSSL_VERSION} /tmp/gmssl-${GMSSL_VERSION}.tar.gz
+
+# 克隆并编译 strongSwan (集成 GmSSL)
+RUN cd /tmp \
+    && git clone --depth 1 --branch ${STRONGSWAN_BRANCH} ${STRONGSWAN_REPO} strongswan-gmssl \
+    && cd strongswan-gmssl \
+    && if [ -f "autogen.sh" ]; then ./autogen.sh; fi \
+    && ./configure --prefix=${INSTALL_PREFIX}/strongswan \
+        --sysconfdir=/etc \
+        --enable-eap-identity \
+        --enable-eap-md5 \
+        --enable-eap-mschapv2 \
+        --enable-eap-tls \
+        --enable-dhcp \
+        --enable-openssl \
+        --enable-swanctl \
+        --enable-vici \
+        --enable-kernel-netlink \
+        --enable-gmsm \
+        --with-gmssl=${INSTALL_PREFIX} \
+        --disable-gmp \
+        PKG_CONFIG_PATH=${INSTALL_PREFIX}/lib/pkgconfig \
+    && make -j $(nproc) \
+    && make install \
+    && rm -rf /tmp/strongswan-gmssl
+
+# 配置环境变量
+ENV PATH="${INSTALL_PREFIX}/strongswan/bin:${INSTALL_PREFIX}/strongswan/sbin:${INSTALL_PREFIX}/bin:${PATH}" \
+    LD_LIBRARY_PATH="${INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH}" \
+    PKG_CONFIG_PATH="${INSTALL_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+
+# 创建配置目录
+RUN mkdir -p /etc/swanctl/x509 \
+             /etc/swanctl/x509ca \
+             /etc/swanctl/x509sm2 \
+             /etc/swanctl/private \
+             /etc/swanctl/rsa \
+             /etc/swanctl/sm2 \
+             /etc/swanctl/conf.d \
+    && chmod 700 /etc/swanctl/private \
+    && chmod 700 /etc/swanctl/sm2
+
+# 创建启动脚本
+RUN printf '#!/bin/bash\n\
+set -e\n\
+\n\
+echo "==================================================================="\n\
+echo "  strongSwan + GmSSL 启动中"\n\
+echo "  支持国密算法: SM2/SM3/SM4"\n\
+echo "==================================================================="\n\
+\n\
+# 显示版本信息\n\
+echo ""\n\
+echo "GmSSL 版本:"\n\
+gmssl version\n\
+echo ""\n\
+echo "strongSwan 版本:"\n\
+charon --version | head -3\n\
+echo ""\n\
+\n\
+# 启用 IP 转发\n\
+sysctl -w net.ipv4.ip_forward=1 2>/dev/null || true\n\
+\n\
+# 检查配置文件\n\
+if [ -f /etc/swanctl/swanctl.conf ]; then\n\
+  echo "✅ 配置文件已找到: /etc/swanctl/swanctl.conf"\n\
+  \n\
+  # 显示配置摘要\n\
+  echo ""\n\
+  echo "配置连接:"\n\
+  grep -E "^\\s+[a-zA-Z0-9_-]+\\s*\\{" /etc/swanctl/swanctl.conf | sed "s/{//g" | sed "s/^/  - /"\n\
+  echo ""\n\
+else\n\
+  echo "⚠️  警告: 未找到配置文件 /etc/swanctl/swanctl.conf"\n\
+  echo "容器将启动但 VPN 连接不会自动建立"\n\
+  echo ""\n\
+fi\n\
+\n\
+echo "启动 charon 守护进程..."\n\
+echo "==================================================================="\n\
+echo ""\n\
+\n\
+# 启动 charon\n\
+exec /usr/local/strongswan/libexec/ipsec/charon\n\
+' > /start.sh \
+    && chmod +x /start.sh
+
+# 暴露端口
+EXPOSE 500/udp 4500/udp
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD pgrep charon || exit 1
+
+# 启动命令
+CMD ["/start.sh"]
