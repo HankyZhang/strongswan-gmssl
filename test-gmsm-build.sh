@@ -42,8 +42,11 @@ if [ ! -d "/usr/local/include/gmssl" ]; then
     fi
     cd GmSSL
     mkdir -p build && cd build
+    # 修复 C99 语法错误：强制使用 C99 标准
+    export CFLAGS="-std=c99 -D_POSIX_C_SOURCE=200809L"
     cmake .. \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DCMAKE_C_FLAGS="-std=c99 -D_POSIX_C_SOURCE=200809L" \
         -DENABLE_SM2_PRIVATE=ON \
         -DENABLE_SM3=ON \
         -DENABLE_SM4=ON
