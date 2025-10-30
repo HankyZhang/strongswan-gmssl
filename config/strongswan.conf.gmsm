@@ -1,0 +1,132 @@
+# strongSwan 配置文件 - 启用 GMSM 插件
+# 位置: /etc/strongswan.conf
+# 日期: 2025-10-30
+
+charon {
+    # 加载模块化配置
+    load_modular = yes
+    
+    # 线程池设置
+    threads = 16
+    
+    # DNS 服务器
+    dns1 = 8.8.8.8
+    dns2 = 8.8.4.4
+    
+    # 插件配置
+    plugins {
+        # 🌟 启用国密算法插件
+        gmsm {
+            load = yes
+        }
+        
+        # OpenSSL 插件(提供传统算法)
+        openssl {
+            load = yes
+            fips_mode = 0
+        }
+        
+        # 其他必要插件
+        random {
+            load = yes
+        }
+        
+        nonce {
+            load = yes
+        }
+        
+        x509 {
+            load = yes
+        }
+        
+        revocation {
+            load = yes
+        }
+        
+        constraints {
+            load = yes
+        }
+        
+        pubkey {
+            load = yes
+        }
+        
+        pem {
+            load = yes
+        }
+        
+        pkcs1 {
+            load = yes
+        }
+        
+        pkcs8 {
+            load = yes
+        }
+        
+        hmac {
+            load = yes
+        }
+        
+        sha1 {
+            load = yes
+        }
+        
+        sha2 {
+            load = yes
+        }
+        
+        aes {
+            load = yes
+        }
+        
+        curve25519 {
+            load = yes
+        }
+        
+        socket-default {
+            load = yes
+        }
+        
+        kernel-netlink {
+            load = yes
+        }
+        
+        vici {
+            load = yes
+        }
+        
+        updown {
+            load = yes
+        }
+    }
+    
+    # 日志设置
+    syslog {
+        daemon {
+            default = 1
+            ike = 2
+            cfg = 2
+        }
+    }
+}
+
+# swanctl 配置
+swanctl {
+    load = yes
+}
+
+# 库配置
+libstrongswan {
+    plugins {
+        # 国密算法插件
+        gmsm {
+            load = yes
+        }
+    }
+}
+
+# VICI 接口
+vici {
+    # Unix socket 路径
+    socket = unix:///var/run/charon.vici
+}
