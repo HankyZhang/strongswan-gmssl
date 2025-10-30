@@ -354,6 +354,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_GMSM
+  SUBDIRS += plugins/gmsm
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/gmsm/libstrongswan-gmsm.la
+endif
+endif
+
 if USE_GMP
   SUBDIRS += plugins/gmp
 if MONOLITHIC

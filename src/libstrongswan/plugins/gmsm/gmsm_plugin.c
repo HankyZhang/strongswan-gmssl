@@ -11,6 +11,7 @@
 
 #include "gmsm_plugin.h"
 #include "gmsm_sm3_hasher.h"
+#include "gmsm_sm4_crypter.h"
 
 #include <library.h>
 
@@ -40,6 +41,10 @@ METHOD(plugin_t, get_features, int,
 		/* SM3 hasher */
 		PLUGIN_REGISTER(HASHER, gmsm_sm3_hasher_create),
 			PLUGIN_PROVIDE(HASHER, HASH_SM3),
+		/* SM4 crypter */
+		PLUGIN_REGISTER(CRYPTER, gmsm_sm4_crypter_create),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_SM4_CBC, 16),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_SM4_GCM_ICV16, 16),
 	};
 	*features = f;
 	return countof(f);

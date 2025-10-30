@@ -67,12 +67,16 @@ enum encryption_algorithm_t {
 	ENCR_RC2_CBC =          1028,
 	ENCR_AES_ECB =			1029,
 	ENCR_AES_CFB =			1030,
+	/* Chinese SM4 */
+	ENCR_SM4_CBC =          1031,
+	ENCR_SM4_GCM_ICV16 =    1032,
 };
 
 #define DES_BLOCK_SIZE			 8
 #define BLOWFISH_BLOCK_SIZE		 8
 #define AES_BLOCK_SIZE			16
 #define CAMELLIA_BLOCK_SIZE		16
+#define SM4_BLOCK_SIZE			16
 #define SERPENT_BLOCK_SIZE		16
 #define TWOFISH_BLOCK_SIZE		16
 
