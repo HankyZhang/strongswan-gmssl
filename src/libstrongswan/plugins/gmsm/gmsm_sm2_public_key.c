@@ -114,6 +114,7 @@ METHOD(public_key_t, get_fingerprint, bool,
 {
 	hasher_t *hasher;
 	chunk_t key;
+	uint8_t public_key_bytes[65];
 
 	if (!this->key_set)
 	{
@@ -124,7 +125,9 @@ METHOD(public_key_t, get_fingerprint, bool,
 	{
 		case KEYID_PUBKEY_SHA1:
 			/* Use SM3 for fingerprint */
-			key = chunk_create(this->key.public_key, 65);
+			/* Convert SM2_POINT to uncompressed octets (65 bytes: 0x04 + X + Y) */
+			sm2_point_to_uncompressed_octets(&this->key.public_key, public_key_bytes);
+			key = chunk_create(public_key_bytes, 65);
 			hasher = lib->crypto->create_hasher(lib->crypto, HASH_SM3);
 			if (!hasher ||
 				!hasher->allocate_hash(hasher, key, fingerprint))

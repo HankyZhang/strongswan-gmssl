@@ -125,8 +125,8 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 		return NULL;
 	}
 
-	/* Extract public key from SM2_KEY */
-	memcpy(pubkey_buf, this->key.public_key, 65);
+	/* Extract public key from SM2_KEY - convert SM2_POINT to uncompressed octets */
+	sm2_point_to_uncompressed_octets(&this->key.public_key, pubkey_buf);
 	pubkey_data = chunk_create(pubkey_buf, 65);
 
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_SM2,
