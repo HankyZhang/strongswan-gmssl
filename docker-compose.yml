@@ -1,0 +1,73 @@
+# Docker Compose for strongSwan VPN
+# 
+# 使用方法:
+#   docker-compose up -d    # 启动
+#   docker-compose down     # 停止
+#   docker-compose logs -f  # 查看日志
+
+version: '3.8'
+
+services:
+  strongswan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: strongswan-gmssl:5.9.6
+    container_name: strongswan-vpn
+    
+    # 需要特权模式来操作网络
+    privileged: true
+    
+    # 使用主机网络（推荐）
+    network_mode: host
+    
+    # 或者使用端口映射
+    # ports:
+    #   - "500:500/udp"   # IKE
+    #   - "4500:4500/udp" # NAT-T
+    
+    # 挂载配置目录
+    volumes:
+      - ./config/swanctl:/etc/swanctl
+      - ./config/strongswan.conf:/etc/strongswan.conf
+      - ./logs:/var/log
+    
+    # 环境变量
+    environment:
+      - TZ=Asia/Shanghai
+    
+    # 重启策略
+    restart: unless-stopped
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "/usr/local/strongswan/sbin/swanctl", "--stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # 可选：添加 Web 管理界面（如果需要）
+  # webui:
+  #   image: nginx:alpine
+  #   container_name: strongswan-webui
+  #   ports:
+  #     - "8080:80"
+  #   volumes:
+  #     - ./webui:/usr/share/nginx/html
+  #   restart: unless-stopped
+
+# 网络配置（如果不使用 host 模式）
+# networks:
+#   vpn_network:
+#     driver: bridge
+#     ipam:
+#       config:
+#         - subnet: 172.20.0.0/16
+
+# 卷配置
+volumes:
+  swanctl_data:
+    driver: local
+  log_data:
+    driver: local
