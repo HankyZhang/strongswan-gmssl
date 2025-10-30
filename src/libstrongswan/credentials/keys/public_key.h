@@ -48,8 +48,10 @@ enum key_type_t {
 	KEY_ED25519 = 4,
 	/** Ed448   PureEdDSA instance as in RFC 8032 */
 	KEY_ED448   = 5,
+	/** BLISS */
+	KEY_BLISS   = 6,
 	/** Chinese SM2 elliptic curve */
-	KEY_SM2     = 6,
+	KEY_SM2     = 7,
 };
 
 /**
@@ -111,6 +113,18 @@ enum signature_scheme_t {
 	SIGN_ED25519,
 	/** PureEdDSA on Curve448 as in RFC 8410                           */
 	SIGN_ED448,
+	/** BLISS with SHA-2_256                                           */
+	SIGN_BLISS_WITH_SHA2_256,
+	/** BLISS with SHA-2_384                                           */
+	SIGN_BLISS_WITH_SHA2_384,
+	/** BLISS with SHA-2_512                                           */
+	SIGN_BLISS_WITH_SHA2_512,
+	/** BLISS with SHA-3_256                                           */
+	SIGN_BLISS_WITH_SHA3_256,
+	/** BLISS with SHA-3_384                                           */
+	SIGN_BLISS_WITH_SHA3_384,
+	/** BLISS with SHA-3_512                                           */
+	SIGN_BLISS_WITH_SHA3_512,
 	/** Chinese SM2 with SM3 hash                                      */
 	SIGN_SM2_WITH_SM3,
 };

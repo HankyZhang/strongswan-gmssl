@@ -28,16 +28,18 @@ ENUM_BEGIN(hash_algorithm_names, HASH_SHA1, HASH_IDENTITY,
 	"HASH_SHA2_384",
 	"HASH_SHA2_512",
 	"HASH_IDENTITY");
-ENUM_NEXT(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA3_512, HASH_IDENTITY,
+ENUM_NEXT(hash_algorithm_names, HASH_UNKNOWN, HASH_SM3, HASH_IDENTITY,
 	"HASH_UNKNOWN",
+	"HASH_MD2",
 	"HASH_MD4",
 	"HASH_MD5",
 	"HASH_SHA2_224",
 	"HASH_SHA3_224",
 	"HASH_SHA3_256",
 	"HASH_SHA3_384",
-	"HASH_SHA3_512");
-ENUM_END(hash_algorithm_names, HASH_SHA3_512);
+	"HASH_SHA3_512",
+	"HASH_SM3");
+ENUM_END(hash_algorithm_names, HASH_SM3);
 
 ENUM_BEGIN(hash_algorithm_short_names, HASH_SHA1, HASH_IDENTITY,
 	"sha1",
@@ -45,16 +47,18 @@ ENUM_BEGIN(hash_algorithm_short_names, HASH_SHA1, HASH_IDENTITY,
 	"sha384",
 	"sha512",
 	"identity");
-ENUM_NEXT(hash_algorithm_short_names, HASH_UNKNOWN, HASH_SHA3_512, HASH_IDENTITY,
+ENUM_NEXT(hash_algorithm_short_names, HASH_UNKNOWN, HASH_SM3, HASH_IDENTITY,
 	"unknown",
+	"md2",
 	"md4",
 	"md5",
 	"sha224",
 	"sha3_224",
 	"sha3_256",
 	"sha3_384",
-	"sha3_512");
-ENUM_END(hash_algorithm_short_names, HASH_SHA3_512);
+	"sha3_512",
+	"sm3");
+ENUM_END(hash_algorithm_short_names, HASH_SM3);
 
 ENUM_BEGIN(hash_algorithm_short_names_upper, HASH_SHA1, HASH_IDENTITY,
 	"SHA1",
@@ -62,16 +66,18 @@ ENUM_BEGIN(hash_algorithm_short_names_upper, HASH_SHA1, HASH_IDENTITY,
 	"SHA2_384",
 	"SHA2_512",
 	"IDENTITY");
-ENUM_NEXT(hash_algorithm_short_names_upper, HASH_UNKNOWN, HASH_SHA3_512, HASH_IDENTITY,
+ENUM_NEXT(hash_algorithm_short_names_upper, HASH_UNKNOWN, HASH_SM3, HASH_IDENTITY,
 	"UNKNOWN",
+	"MD2",
 	"MD4",
 	"MD5",
 	"SHA2_224",
 	"SHA3_224",
 	"SHA3_256",
 	"SHA3_384",
-	"SHA3_512");
-ENUM_END(hash_algorithm_short_names_upper, HASH_SHA3_512);
+	"SHA3_512",
+	"SM3");
+ENUM_END(hash_algorithm_short_names_upper, HASH_SM3);
 
 /*
  * Described in header
@@ -88,6 +94,8 @@ size_t hasher_hash_size(hash_algorithm_t alg)
 			return HASH_SIZE_SHA384;
 		case HASH_SHA512:
 			return HASH_SIZE_SHA512;
+		case HASH_MD2:
+			return HASH_SIZE_MD2;
 		case HASH_MD4:
 			return HASH_SIZE_MD4;
 		case HASH_MD5:
@@ -102,6 +110,8 @@ size_t hasher_hash_size(hash_algorithm_t alg)
 			return HASH_SIZE_SHA384;
 		case HASH_SHA3_512:
 			return HASH_SIZE_SHA512;
+		case HASH_SM3:
+			return HASH_SIZE_SM3;
 		case HASH_IDENTITY:
 		case HASH_UNKNOWN:
 			break;
@@ -489,6 +499,8 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
 		case SIGN_ED25519:
 		case SIGN_ED448:
 			return HASH_IDENTITY;
+		case SIGN_SM2_WITH_SM3:
+			return HASH_SM3;
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return HASH_MD5;
 		case SIGN_RSA_EMSA_PKCS1_SHA1:

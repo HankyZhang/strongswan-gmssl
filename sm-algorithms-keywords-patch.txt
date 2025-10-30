@@ -1,0 +1,20 @@
+# strongSwan proposal_keywords_static.txt 补丁
+# 添加国密算法关键字支持
+
+# 在 ENCRYPTION_ALGORITHM 部分添加（大约在 twofish 之后）:
+sm4,              ENCRYPTION_ALGORITHM, ENCR_SM4_CBC,            128
+sm4cbc,           ENCRYPTION_ALGORITHM, ENCR_SM4_CBC,            128
+sm4gcm,           ENCRYPTION_ALGORITHM, ENCR_SM4_GCM_ICV16,      128
+sm4gcm16,         ENCRYPTION_ALGORITHM, ENCR_SM4_GCM_ICV16,      128
+
+# 在 INTEGRITY_ALGORITHM 部分添加（大约在 aescmac 之后）:
+sm3,              INTEGRITY_ALGORITHM,  AUTH_HMAC_SM3_96,          0
+
+# 在 PSEUDO_RANDOM_FUNCTION 部分添加（大约在 prfaescmac 之后）:
+prfsm3,           PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SM3,            0
+
+# 注意:
+# 1. ENCR_SM4_CBC = 1031 (已在 crypter.h 定义)
+# 2. ENCR_SM4_GCM_ICV16 = 1032 (已在 crypter.h 定义)
+# 3. AUTH_HMAC_SM3_96 需要在 signers/signer.h 中定义
+# 4. PRF_HMAC_SM3 需要在 crypto/prfs/prf.h 中定义
