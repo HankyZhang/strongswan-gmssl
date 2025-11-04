@@ -1,31 +1,49 @@
 # strongSwan-GmSSL - 国密算法集成版本
 
-> 基于 strongSwan 5.9.6，集成 GmSSL 3.1.1 国密算法库的 IPsec VPN 实现
+> 基于 strongSwan 5.9.14，集成 GmSSL 3.x 国密算法库的 IPsec VPN 实现
 
 [![License](https://img.shields.io/badge/license-GPLv2-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/strongSwan-5.9.6-green.svg)](https://github.com/HankyZhang/strongswan-gmssl)
-[![GmSSL](https://img.shields.io/badge/GmSSL-3.1.1-orange.svg)](https://github.com/guanzhi/GmSSL)
+[![Version](https://img.shields.io/badge/strongSwan-5.9.14-green.svg)](https://github.com/HankyZhang/strongswan-gmssl)
+[![GmSSL](https://img.shields.io/badge/GmSSL-3.x-orange.svg)](https://github.com/guanzhi/GmSSL)
 [![Algorithms](https://img.shields.io/badge/国密算法-SM2%2FSM3%2FSM4-red.svg)]()
+[![Status](https://img.shields.io/badge/status-开发中-yellow.svg)]()
 
 ---
 
-## 🆕 国密版本（推荐）
+## 📢 项目状态
 
-**新增功能**：集成 GmSSL 3.1.1，支持国密算法 SM2/SM3/SM4
+**当前进度**: 🟡 开发中 (60%完成)
 
-### 快速部署
+- ✅ SM3哈希算法 - 已完成
+- ✅ SM4加密算法 - 已完成  
+- ⚠️ SM2签名算法 - 开发中
+- ❌ SM2密钥交换 - 待开始
 
-```powershell
-# Windows (PowerShell)
-cd C:\Code\strongswan
-.\deploy-gmssl.ps1
-```
+详细进度请查看 [国密算法集成进度报告.md](国密算法集成进度报告.md)
+
+---
+
+## 🚀 快速开始
+
+### 构建GMSM插件
 
 ```bash
-# Linux/云端 (CentOS 7)
-wget https://raw.githubusercontent.com/HankyZhang/strongswan-gmssl/master/cloud-vpn-setup-gmssl.sh
-chmod +x cloud-vpn-setup-gmssl.sh
-./cloud-vpn-setup-gmssl.sh
+# Linux环境
+./build-with-gmsm.sh
+```
+
+### 测试插件
+
+```bash
+# 测试GMSM插件加载
+./test-gmsm-plugin.sh
+```
+
+### 部署VPN服务器
+
+```bash
+# CentOS 7 云主机部署
+./cloud-vpn-setup-centos.sh
 ```
 
 📖 **详细文档**: [GmSSL部署指南.md](GmSSL部署指南.md)
