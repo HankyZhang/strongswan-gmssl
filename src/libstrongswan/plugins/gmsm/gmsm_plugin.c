@@ -16,6 +16,7 @@
 #include "gmsm_sm2_public_key.h"
 #include "gmsm_sm3_signer.h"
 #include "gmsm_sm3_prf.h"
+#include "gmsm_sm2_dh.h"
 
 #include <library.h>
 
@@ -55,6 +56,10 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(CRYPTER, gmsm_sm4_crypter_create),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_SM4_CBC, 16),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_SM4_GCM_ICV16, 16),
+		/* SM2 Diffie-Hellman */
+		PLUGIN_REGISTER(KE, gmsm_sm2_dh_create),
+			PLUGIN_PROVIDE(KE, SM2_256),
+				PLUGIN_DEPENDS(RNG, RNG_STRONG),
 		/* SM2 private key */
 		PLUGIN_REGISTER(PRIVKEY, gmsm_sm2_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_SM2),

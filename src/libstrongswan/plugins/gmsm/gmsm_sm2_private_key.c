@@ -12,7 +12,9 @@
 #include "gmsm_sm2_private_key.h"
 #include "gmsm_sm2_public_key.h"
 
+#include <library.h>
 #include <gmssl/sm2.h>
+#include <gmssl/sm3.h>
 #include <gmssl/pem.h>
 #include <string.h>
 
@@ -49,30 +51,45 @@ METHOD(private_key_t, sign, bool,
 	void *params, chunk_t data, chunk_t *signature)
 {
 	uint8_t sig_buf[SM2_MAX_SIGNATURE_SIZE];
-	size_t siglen;
+	size_t siglen = sizeof(sig_buf);
 	uint8_t dgst[32];  /* SM3 digest */
 	SM3_CTX sm3_ctx;
+	const char *id = SM2_DEFAULT_ID;
+	size_t idlen = strlen(SM2_DEFAULT_ID);
 
 	if (!this->key_set)
 	{
+		DBG1(DBG_LIB, "SM2 private key not set");
 		return FALSE;
 	}
 
 	switch (scheme)
 	{
 		case SIGN_SM2_WITH_SM3:
-			/* Calculate SM3 digest */
-			sm3_init(&sm3_ctx);
-			sm3_update(&sm3_ctx, data.ptr, data.len);
-			sm3_finish(&sm3_ctx, dgst);
-
-			/* Sign with SM2 */
-			if (sm2_sign(&this->key, dgst, sig_buf, &siglen) != 1)
+			/* Calculate SM3 digest with Z value (SM2 requires ID in signature) */
+			if (sm2_compute_z(dgst, &this->key.public_key, id, idlen) != 1)
 			{
+				DBG1(DBG_LIB, "SM2 compute Z failed");
 				return FALSE;
 			}
+
+			/* Hash Z || M */
+			sm3_init(&sm3_ctx);
+			sm3_update(&sm3_ctx, dgst, 32);  /* Z value */
+			sm3_update(&sm3_ctx, data.ptr, data.len);  /* message */
+			sm3_finish(&sm3_ctx, dgst);  /* final digest */
+
+			/* Sign the digest with SM2 */
+			if (sm2_sign(&this->key, dgst, sig_buf, &siglen) != 1)
+			{
+				DBG1(DBG_LIB, "SM2 signature generation failed");
+				return FALSE;
+			}
+
+			DBG3(DBG_LIB, "SM2 signature generated, size: %zu", siglen);
 			break;
 		default:
+			DBG1(DBG_LIB, "unsupported signature scheme %N", signature_scheme_names, scheme);
 			return FALSE;
 	}
 

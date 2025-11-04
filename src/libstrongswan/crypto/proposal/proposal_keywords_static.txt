@@ -181,6 +181,8 @@ gost512,          KEY_EXCHANGE_METHOD, GOST3410_512,               0
 mlkem512,         KEY_EXCHANGE_METHOD, ML_KEM_512,                 0
 mlkem768,         KEY_EXCHANGE_METHOD, ML_KEM_768,                 0
 mlkem1024,        KEY_EXCHANGE_METHOD, ML_KEM_1024,                0
+sm2,              KEY_EXCHANGE_METHOD, SM2_256,                    0
+sm2_256,          KEY_EXCHANGE_METHOD, SM2_256,                    0
 # Chinese SM (ShangMi) Algorithms
 sm4,              ENCRYPTION_ALGORITHM, ENCR_SM4_CBC,            128
 sm4cbc,           ENCRYPTION_ALGORITHM, ENCR_SM4_CBC,            128

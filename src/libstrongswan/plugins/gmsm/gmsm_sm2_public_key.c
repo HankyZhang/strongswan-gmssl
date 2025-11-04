@@ -11,7 +11,9 @@
 
 #include "gmsm_sm2_public_key.h"
 
+#include <library.h>
 #include <gmssl/sm2.h>
+#include <gmssl/sm3.h>
 #include <string.h>
 
 typedef struct private_gmsm_sm2_public_key_t private_gmsm_sm2_public_key_t;
@@ -48,27 +50,42 @@ METHOD(public_key_t, verify, bool,
 {
 	uint8_t dgst[32];  /* SM3 digest */
 	SM3_CTX sm3_ctx;
+	const char *id = SM2_DEFAULT_ID;
+	size_t idlen = strlen(SM2_DEFAULT_ID);
 
 	if (!this->key_set)
 	{
+		DBG1(DBG_LIB, "SM2 public key not set");
 		return FALSE;
 	}
 
 	switch (scheme)
 	{
 		case SIGN_SM2_WITH_SM3:
-			/* Calculate SM3 digest */
+			/* Calculate SM3 digest with Z value (must match signing process) */
+			if (sm2_compute_z(dgst, &this->key.public_key, id, idlen) != 1)
+			{
+				DBG1(DBG_LIB, "SM2 compute Z failed");
+				return FALSE;
+			}
+
+			/* Hash Z || M */
 			sm3_init(&sm3_ctx);
-			sm3_update(&sm3_ctx, data.ptr, data.len);
-			sm3_finish(&sm3_ctx, dgst);
+			sm3_update(&sm3_ctx, dgst, 32);  /* Z value */
+			sm3_update(&sm3_ctx, data.ptr, data.len);  /* message */
+			sm3_finish(&sm3_ctx, dgst);  /* final digest */
 
 			/* Verify with SM2 */
 			if (sm2_verify(&this->key, dgst, signature.ptr, signature.len) != 1)
 			{
+				DBG1(DBG_LIB, "SM2 signature verification failed");
 				return FALSE;
 			}
+
+			DBG3(DBG_LIB, "SM2 signature verified successfully");
 			break;
 		default:
+			DBG1(DBG_LIB, "unsupported signature scheme %N", signature_scheme_names, scheme);
 			return FALSE;
 	}
 

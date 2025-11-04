@@ -73,6 +73,8 @@ enum key_exchange_method_t {
 	ML_KEM_512    = 35,
 	ML_KEM_768    = 36,
 	ML_KEM_1024   = 37,
+	/** Chinese SM2 curve for key exchange, in PRIVATE USE */
+	SM2_256       = 1025,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
 	MODP_NULL     = 1024,
 	/** MODP group with custom generator/prime */
