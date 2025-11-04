@@ -667,6 +667,7 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 			break;
 		case ECP_256_BIT:
 		case ECP_256_BP:
+		case SM2_256:
 			valid = value.len == 64;
 			break;
 		case ECP_384_BIT:
