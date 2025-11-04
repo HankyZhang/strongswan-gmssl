@@ -28,9 +28,9 @@ typedef struct gmsm_sm2_dh_t gmsm_sm2_dh_t;
 struct gmsm_sm2_dh_t {
 
 	/**
-	 * Implements diffie_hellman_t interface.
+	 * Implements key_exchange_t interface.
 	 */
-	diffie_hellman_t dh;
+	key_exchange_t ke;
 };
 
 /**

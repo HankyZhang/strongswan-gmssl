@@ -28,9 +28,9 @@ struct private_gmsm_sm2_dh_t {
 	gmsm_sm2_dh_t public;
 
 	/**
-	 * Diffie-Hellman group number.
+	 * Key exchange method.
 	 */
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 
 	/**
 	 * Private key for SM2 key exchange
@@ -48,7 +48,7 @@ struct private_gmsm_sm2_dh_t {
 	chunk_t shared_secret;
 };
 
-METHOD(diffie_hellman_t, set_other_public_value, bool,
+METHOD(key_exchange_t, set_other_public_value, bool,
 	private_gmsm_sm2_dh_t *this, chunk_t value)
 {
 	SM2_POINT peer_public;
@@ -82,7 +82,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_other_public_value, bool,
+METHOD(key_exchange_t, get_other_public_value, bool,
 	private_gmsm_sm2_dh_t *this, chunk_t *value)
 {
 	/* Not typically used in strongSwan, but return our public value */
@@ -90,7 +90,7 @@ METHOD(diffie_hellman_t, get_other_public_value, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, set_private_value, bool,
+METHOD(key_exchange_t, set_private_value, bool,
 	private_gmsm_sm2_dh_t *this, chunk_t value)
 {
 	/* Generate new SM2 key pair */
@@ -107,14 +107,14 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, bool,
+METHOD(key_exchange_t, get_my_public_value, bool,
 	private_gmsm_sm2_dh_t *this, chunk_t *value)
 {
 	*value = chunk_clone(chunk_create(this->public_value, 65));
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, bool,
+METHOD(key_exchange_t, get_shared_secret, bool,
 	private_gmsm_sm2_dh_t *this, chunk_t *secret)
 {
 	if (!this->shared_secret.len)
@@ -127,13 +127,13 @@ METHOD(diffie_hellman_t, get_shared_secret, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+METHOD(key_exchange_t, get_dh_group, key_exchange_method_t,
 	private_gmsm_sm2_dh_t *this)
 {
 	return this->group;
 }
 
-METHOD(diffie_hellman_t, destroy, void,
+METHOD(key_exchange_t, destroy, void,
 	private_gmsm_sm2_dh_t *this)
 {
 	chunk_clear(&this->shared_secret);
@@ -159,7 +159,7 @@ gmsm_sm2_dh_t *gmsm_sm2_dh_create(key_exchange_method_t group, ...)
 
 	INIT(this,
 		.public = {
-			.dh = {
+			.ke = {
 				.get_shared_secret = _get_shared_secret,
 				.set_other_public_value = _set_other_public_value,
 				.get_my_public_value = _get_my_public_value,
