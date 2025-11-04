@@ -2,9 +2,10 @@
 # Dockerfile for strongSwan with GmSSL (National Cryptographic Algorithms)
 # 支持国密算法: SM2/SM3/SM4
 # Base: Ubuntu 22.04
+# 优化构建: 使用层缓存加速重复构建
 # ==============================================================================
 
-FROM ubuntu:22.04
+FROM ubuntu:22.04 AS base
 
 LABEL maintainer="HankyZhang" \
       description="strongSwan with GmSSL - National Cryptographic Algorithms Support" \
@@ -18,7 +19,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     STRONGSWAN_BRANCH=master \
     INSTALL_PREFIX=/usr/local
 
-# 安装依赖
+# ============ 第一层: 安装系统依赖 (很少变化,可以长期缓存) ============
+FROM base AS dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -38,15 +40,11 @@ RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     libcap-ng-dev \
     gettext \
-    iptables \
-    iproute2 \
-    net-tools \
-    vim \
-    iputils-ping \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 编译安装 GmSSL
+# ============ 第二层: 编译安装 GmSSL (GmSSL 版本很少变化) ============
+FROM dependencies AS gmssl-builder
+
 RUN cd /tmp \
     && wget -q https://github.com/guanzhi/GmSSL/archive/refs/tags/v${GMSSL_VERSION}.tar.gz \
         -O gmssl-${GMSSL_VERSION}.tar.gz \
@@ -65,8 +63,11 @@ RUN cd /tmp \
     && ldconfig \
     && rm -rf /tmp/GmSSL-${GMSSL_VERSION} /tmp/gmssl-${GMSSL_VERSION}.tar.gz
 
-# 克隆并编译 strongSwan (集成 GmSSL)
-RUN cd /tmp \
+# ============ 第三层: 编译 strongSwan (代码经常变化,使用 --build-arg 控制缓存) ============
+FROM gmssl-builder AS strongswan-builder
+ARG CACHE_BUST=1
+RUN echo "Cache bust: ${CACHE_BUST}" \
+    && cd /tmp \
     && git clone --depth 1 --branch ${STRONGSWAN_BRANCH} ${STRONGSWAN_REPO} strongswan-gmssl \
     && cd strongswan-gmssl \
     && if [ -f "autogen.sh" ]; then ./autogen.sh; fi \
@@ -88,6 +89,24 @@ RUN cd /tmp \
     && make -j $(nproc) \
     && make install \
     && rm -rf /tmp/strongswan-gmssl
+
+# ============ 最终镜像: 安装运行时工具 ============
+FROM base AS final
+COPY --from=strongswan-builder ${INSTALL_PREFIX} ${INSTALL_PREFIX}
+
+# 安装运行时依赖 (不需要编译工具)
+RUN apt-get update && apt-get install -y \
+    iptables \
+    iproute2 \
+    net-tools \
+    vim \
+    iputils-ping \
+    curl \
+    libssl3 \
+    libsystemd0 \
+    libcurl4 \
+    && rm -rf /var/lib/apt/lists/* \
+    && ldconfig
 
 # 配置环境变量
 ENV PATH="${INSTALL_PREFIX}/strongswan/bin:${INSTALL_PREFIX}/strongswan/sbin:${INSTALL_PREFIX}/bin:${PATH}" \
