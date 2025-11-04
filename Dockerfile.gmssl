@@ -28,6 +28,9 @@ RUN apt-get update && apt-get install -y \
     automake \
     libtool \
     pkg-config \
+    gperf \
+    bison \
+    flex \
     libpam0g-dev \
     libssl-dev \
     libgmp3-dev \
