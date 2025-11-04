@@ -145,15 +145,15 @@ METHOD(diffie_hellman_t, destroy, void,
 /*
  * Described in header
  */
-gmsm_sm2_dh_t *gmsm_sm2_dh_create(diffie_hellman_group_t group, ...)
+gmsm_sm2_dh_t *gmsm_sm2_dh_create(key_exchange_method_t group, ...)
 {
 	private_gmsm_sm2_dh_t *this;
 
-	/* Only support SM2 curve group (we'll use a custom group number) */
+	/* Only support SM2 curve group */
 	if (group != SM2_256)
 	{
-		DBG1(DBG_LIB, "DH group %N not supported by SM2", 
-			 diffie_hellman_group_names, group);
+		DBG1(DBG_LIB, "Key exchange method %N not supported by SM2", 
+			 key_exchange_method_names, group);
 		return NULL;
 	}
 
