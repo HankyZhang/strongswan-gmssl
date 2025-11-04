@@ -62,7 +62,7 @@ METHOD(signer_t, get_signature, bool,
 	memcpy(buffer, mac, this->trunc_len);
 
 	/* Re-initialize for next operation */
-	hmac_init(&this->hmac_ctx, &sm3_digest, this->key.ptr, this->key.len);
+	hmac_init(&this->hmac_ctx, sm3_digest(), this->key.ptr, this->key.len);
 
 	return TRUE;
 }
@@ -98,7 +98,7 @@ METHOD(signer_t, verify_signature, bool,
 	hmac_finish(&this->hmac_ctx, mac, &mac_len);
 
 	/* Re-initialize for next operation */
-	hmac_init(&this->hmac_ctx, &sm3_digest, this->key.ptr, this->key.len);
+	hmac_init(&this->hmac_ctx, sm3_digest(), this->key.ptr, this->key.len);
 
 	/* Compare */
 	buffer = signature.ptr;
@@ -125,7 +125,7 @@ METHOD(signer_t, set_key, bool,
 	this->key = chunk_clone(key);
 	
 	/* Initialize HMAC-SM3 with the provided key */
-	hmac_init(&this->hmac_ctx, &sm3_digest, key.ptr, key.len);
+	hmac_init(&this->hmac_ctx, sm3_digest(), key.ptr, key.len);
 	return TRUE;
 }
 
