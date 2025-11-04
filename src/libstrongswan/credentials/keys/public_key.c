@@ -218,6 +218,15 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 			return OID_ED25519;
 		case SIGN_ED448:
 			return OID_ED448;
+		case SIGN_SM2_WITH_SM3:
+		case SIGN_BLISS_WITH_SHA2_256:
+		case SIGN_BLISS_WITH_SHA2_384:
+		case SIGN_BLISS_WITH_SHA2_512:
+		case SIGN_BLISS_WITH_SHA3_256:
+		case SIGN_BLISS_WITH_SHA3_384:
+		case SIGN_BLISS_WITH_SHA3_512:
+			/* not handled, fall through */
+			break;
 	}
 	return OID_UNKNOWN;
 }
@@ -344,6 +353,16 @@ key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
 			return KEY_ED25519;
 		case SIGN_ED448:
 			return KEY_ED448;
+		case SIGN_SM2_WITH_SM3:
+			return KEY_ECDSA;  /* SM2 uses ECDSA key type */
+		case SIGN_BLISS_WITH_SHA2_256:
+		case SIGN_BLISS_WITH_SHA2_384:
+		case SIGN_BLISS_WITH_SHA2_512:
+		case SIGN_BLISS_WITH_SHA3_256:
+		case SIGN_BLISS_WITH_SHA3_384:
+		case SIGN_BLISS_WITH_SHA3_512:
+			/* BLISS not handled, fall through */
+			break;
 	}
 	return KEY_ANY;
 }
