@@ -1,52 +1,52 @@
 # ============================================================================
-# strongSwan + GmSSL Docker 构建脚本 (PowerShell)
+# strongSwan + GmSSL Docker Build Script (PowerShell)
 # ============================================================================
-# 使用说明:
-#   .\build-gmssl.ps1              # 使用缓存构建
-#   .\build-gmssl.ps1 -NoCache     # 强制重新构建所有层
-#   .\build-gmssl.ps1 -ForceUpdate # 仅重新构建 strongSwan(跳过依赖和GmSSL缓存)
+# Usage:
+#   .\build-gmssl.ps1              # Build with cache
+#   .\build-gmssl.ps1 -NoCache     # Rebuild all layers
+#   .\build-gmssl.ps1 -ForceUpdate # Rebuild strongSwan only (keep deps cache)
 # ============================================================================
 
 param(
-    [switch]$NoCache,      # 完全不使用缓存
-    [switch]$ForceUpdate   # 强制更新 strongSwan 代码(保留依赖和GmSSL缓存)
+    [switch]$NoCache,      # No cache at all
+    [switch]$ForceUpdate   # Force update strongSwan code (keep deps and GmSSL cache)
 )
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "============================================================================" -ForegroundColor Cyan
-Write-Host "  strongSwan + GmSSL Docker 镜像构建" -ForegroundColor Cyan
+Write-Host "  strongSwan + GmSSL Docker Image Build" -ForegroundColor Cyan
 Write-Host "============================================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 检查 Docker
+# Check Docker
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    Write-Host "❌ 错误: 未找到 Docker。请先安装 Docker Desktop。" -ForegroundColor Red
+    Write-Host "ERROR: Docker not found. Please install Docker Desktop first." -ForegroundColor Red
     exit 1
 }
 
-# 构建参数
+# Build arguments
 $buildArgs = @()
 
 if ($NoCache) {
-    Write-Host "🔄 模式: 完全重新构建 (不使用任何缓存)" -ForegroundColor Yellow
+    Write-Host "Mode: Full rebuild (no cache)" -ForegroundColor Yellow
     $buildArgs += "--no-cache"
 } elseif ($ForceUpdate) {
-    Write-Host "🔄 模式: 强制更新 strongSwan (保留依赖和GmSSL缓存)" -ForegroundColor Yellow
-    # 使用时间戳作为 cache-bust 参数
+    Write-Host "Mode: Force update strongSwan (keep deps and GmSSL cache)" -ForegroundColor Yellow
+    # Use timestamp as cache-bust parameter
     $timestamp = Get-Date -Format "yyyyMMddHHmmss"
     $buildArgs += "--build-arg", "CACHE_BUST=$timestamp"
 } else {
-    Write-Host "✅ 模式: 使用缓存构建 (推荐)" -ForegroundColor Green
+    Write-Host "Mode: Build with cache (recommended)" -ForegroundColor Green
 }
 
 Write-Host ""
-Write-Host "开始构建..." -ForegroundColor Cyan
+Write-Host "Starting build..." -ForegroundColor Cyan
 Write-Host ""
 
-# 执行构建
+# Execute build
 $command = "docker-compose -f docker-compose.gmssl.yml build $($buildArgs -join ' ')"
-Write-Host "执行命令: $command" -ForegroundColor Gray
+Write-Host "Command: $command" -ForegroundColor Gray
 Write-Host ""
 
 try {
@@ -55,33 +55,33 @@ try {
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
         Write-Host "============================================================================" -ForegroundColor Green
-        Write-Host "  ✅ 构建成功!" -ForegroundColor Green
+        Write-Host "  Build successful!" -ForegroundColor Green
         Write-Host "============================================================================" -ForegroundColor Green
         Write-Host ""
-        Write-Host "验证镜像:" -ForegroundColor Cyan
+        Write-Host "Verify image:" -ForegroundColor Cyan
         docker images | Select-String "strongswan-gmssl"
         Write-Host ""
-        Write-Host "启动容器:" -ForegroundColor Cyan
+        Write-Host "Start container:" -ForegroundColor Cyan
         Write-Host "  docker-compose -f docker-compose.gmssl.yml up -d" -ForegroundColor Yellow
         Write-Host ""
-        Write-Host "查看日志:" -ForegroundColor Cyan
+        Write-Host "View logs:" -ForegroundColor Cyan
         Write-Host "  docker-compose -f docker-compose.gmssl.yml logs -f" -ForegroundColor Yellow
         Write-Host ""
     } else {
-        throw "构建失败,退出码: $LASTEXITCODE"
+        throw "Build failed with exit code: $LASTEXITCODE"
     }
 } catch {
     Write-Host ""
     Write-Host "============================================================================" -ForegroundColor Red
-    Write-Host "  ❌ 构建失败!" -ForegroundColor Red
+    Write-Host "  Build failed!" -ForegroundColor Red
     Write-Host "============================================================================" -ForegroundColor Red
     Write-Host ""
-    Write-Host "错误信息: $_" -ForegroundColor Red
+    Write-Host "Error: $_" -ForegroundColor Red
     Write-Host ""
-    Write-Host "故障排除提示:" -ForegroundColor Yellow
-    Write-Host "  1. 检查错误日志中的具体错误信息" -ForegroundColor Gray
-    Write-Host "  2. 尝试清理 Docker 缓存: docker system prune -a" -ForegroundColor Gray
-    Write-Host "  3. 使用 -NoCache 参数完全重新构建: .\build-gmssl.ps1 -NoCache" -ForegroundColor Gray
+    Write-Host "Troubleshooting tips:" -ForegroundColor Yellow
+    Write-Host "  1. Check error logs for specific errors" -ForegroundColor Gray
+    Write-Host "  2. Clean Docker cache: docker system prune -a" -ForegroundColor Gray
+    Write-Host "  3. Full rebuild: .\build-gmssl.ps1 -NoCache" -ForegroundColor Gray
     Write-Host ""
     exit 1
 }
