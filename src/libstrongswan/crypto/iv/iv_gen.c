@@ -40,6 +40,7 @@ iv_gen_t* iv_gen_create_for_alg(encryption_algorithm_t alg)
 		case ENCR_TWOFISH_CBC:
 		case ENCR_RC2_CBC:
 		case ENCR_AES_CFB:
+		case ENCR_SM4_CBC:
 			return iv_gen_rand_create();
 		case ENCR_AES_CTR:
 		case ENCR_AES_CCM_ICV8:
@@ -54,6 +55,7 @@ iv_gen_t* iv_gen_create_for_alg(encryption_algorithm_t alg)
 		case ENCR_CAMELLIA_CCM_ICV16:
 		case ENCR_CHACHA20_POLY1305:
 		case ENCR_NULL_AUTH_AES_GMAC:
+		case ENCR_SM4_GCM_ICV16:
 			return iv_gen_seq_create();
 		case ENCR_NULL:
 			return iv_gen_null_create();
