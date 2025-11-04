@@ -14,6 +14,8 @@ endif
 libstrongswan_gmsm_la_SOURCES = \
 	gmsm_plugin.h gmsm_plugin.c \
 	gmsm_sm3_hasher.h gmsm_sm3_hasher.c \
+	gmsm_sm3_signer.h gmsm_sm3_signer.c \
+	gmsm_sm3_prf.h gmsm_sm3_prf.c \
 	gmsm_sm4_crypter.h gmsm_sm4_crypter.c \
 	gmsm_sm2_private_key.h gmsm_sm2_private_key.c \
 	gmsm_sm2_public_key.h gmsm_sm2_public_key.c

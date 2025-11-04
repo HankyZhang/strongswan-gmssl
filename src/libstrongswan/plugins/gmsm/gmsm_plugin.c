@@ -14,6 +14,8 @@
 #include "gmsm_sm4_crypter.h"
 #include "gmsm_sm2_private_key.h"
 #include "gmsm_sm2_public_key.h"
+#include "gmsm_sm3_signer.h"
+#include "gmsm_sm3_prf.h"
 
 #include <library.h>
 
@@ -43,6 +45,12 @@ METHOD(plugin_t, get_features, int,
 		/* SM3 hasher */
 		PLUGIN_REGISTER(HASHER, gmsm_sm3_hasher_create),
 			PLUGIN_PROVIDE(HASHER, HASH_SM3),
+		/* SM3 HMAC signer */
+		PLUGIN_REGISTER(SIGNER, gmsm_sm3_signer_create),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SM3_96),
+		/* SM3 PRF */
+		PLUGIN_REGISTER(PRF, gmsm_sm3_prf_create),
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SM3),
 		/* SM4 crypter */
 		PLUGIN_REGISTER(CRYPTER, gmsm_sm4_crypter_create),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_SM4_CBC, 16),

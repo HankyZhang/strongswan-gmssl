@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
  * Copyright (C) secunet Security Networks AG
@@ -63,6 +63,8 @@ enum pseudo_random_function_t {
 	PRF_KEYED_SHA1 = 1027,
 	/** draft-kanno-ipsecme-camellia-xcbc, not yet assigned by IANA */
 	PRF_CAMELLIA128_XCBC = 1028,
+	/** Chinese SM3 HMAC PRF (private use space) */
+	PRF_HMAC_SM3 = 1035,
 };
 
 /**
