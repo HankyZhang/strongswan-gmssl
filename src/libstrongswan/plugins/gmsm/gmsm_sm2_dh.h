@@ -20,6 +20,7 @@
 typedef struct gmsm_sm2_dh_t gmsm_sm2_dh_t;
 
 #include <library.h>
+#include <crypto/key_exchange.h>
 
 /**
  * Implementation of the SM2-based Diffie-Hellman key exchange.
