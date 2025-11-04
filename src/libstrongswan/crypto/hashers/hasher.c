@@ -183,6 +183,8 @@ hash_algorithm_t hasher_algorithm_from_prf(pseudo_random_function_t alg)
 			return HASH_SHA384;
 		case PRF_HMAC_SHA2_512:
 			return HASH_SHA512;
+		case PRF_HMAC_SM3:
+			return HASH_SM3;
 		case PRF_HMAC_TIGER:
 		case PRF_AES128_XCBC:
 		case PRF_AES128_CMAC:
@@ -254,6 +256,8 @@ hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t alg,
 		case AUTH_HMAC_SHA2_512_256:
 		case AUTH_HMAC_SHA2_512_512:
 			return HASH_SHA512;
+		case AUTH_HMAC_SM3_96:
+			return HASH_SM3;
 		case AUTH_AES_CMAC_96:
 		case AUTH_AES_128_GMAC:
 		case AUTH_AES_192_GMAC:
@@ -325,6 +329,14 @@ integrity_algorithm_t hasher_algorithm_to_integrity(hash_algorithm_t alg,
 					return AUTH_HMAC_SHA2_512_512;
 			}
 			break;
+		case HASH_SM3:
+			switch (length)
+			{
+				case 12:
+					return AUTH_HMAC_SM3_96;
+			}
+			break;
+		case HASH_MD2:
 		case HASH_MD4:
 		case HASH_SHA224:
 		case HASH_SHA3_224:
@@ -350,6 +362,8 @@ bool hasher_algorithm_for_ikev2(hash_algorithm_t alg)
 		case HASH_SHA384:
 		case HASH_SHA512:
 			return TRUE;
+		case HASH_SM3:
+		case HASH_MD2:
 		case HASH_UNKNOWN:
 		case HASH_MD4:
 		case HASH_MD5:
@@ -528,6 +542,14 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
 			return HASH_SHA3_384;
 		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
 			return HASH_SHA3_512;
+		case SIGN_BLISS_WITH_SHA2_256:
+		case SIGN_BLISS_WITH_SHA2_384:
+		case SIGN_BLISS_WITH_SHA2_512:
+		case SIGN_BLISS_WITH_SHA3_256:
+		case SIGN_BLISS_WITH_SHA3_384:
+		case SIGN_BLISS_WITH_SHA3_512:
+			/* not handled, fall through */
+			break;
 	}
 	return HASH_UNKNOWN;
 }
