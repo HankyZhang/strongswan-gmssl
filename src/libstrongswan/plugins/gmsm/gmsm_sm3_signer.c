@@ -31,6 +31,11 @@ struct private_gmsm_sm3_signer_t {
 	HMAC_CTX hmac_ctx;
 
 	/**
+	 * Stored key for re-initialization
+	 */
+	chunk_t key;
+
+	/**
 	 * Truncation length for MAC (12 bytes for 96-bit)
 	 */
 	size_t trunc_len;
@@ -40,6 +45,7 @@ METHOD(signer_t, get_signature, bool,
 	private_gmsm_sm3_signer_t *this, chunk_t data, uint8_t *buffer)
 {
 	uint8_t mac[SM3_HMAC_SIZE];
+	size_t mac_len;
 
 	if (buffer == NULL)
 	{
@@ -50,13 +56,13 @@ METHOD(signer_t, get_signature, bool,
 
 	/* Generate HMAC */
 	hmac_update(&this->hmac_ctx, data.ptr, data.len);
-	hmac_finish(&this->hmac_ctx, mac);
+	hmac_finish(&this->hmac_ctx, mac, &mac_len);
 
 	/* Copy truncated MAC to output buffer */
 	memcpy(buffer, mac, this->trunc_len);
 
 	/* Re-initialize for next operation */
-	hmac_init(&this->hmac_ctx, this->hmac_ctx.key, this->hmac_ctx.key_size);
+	hmac_init(&this->hmac_ctx, &sm3_digest, this->key.ptr, this->key.len);
 
 	return TRUE;
 }
@@ -79,6 +85,7 @@ METHOD(signer_t, verify_signature, bool,
 	private_gmsm_sm3_signer_t *this, chunk_t data, chunk_t signature)
 {
 	uint8_t mac[SM3_HMAC_SIZE];
+	size_t mac_len;
 	uint8_t *buffer;
 
 	if (signature.len != this->trunc_len)
@@ -88,10 +95,10 @@ METHOD(signer_t, verify_signature, bool,
 
 	/* Generate MAC */
 	hmac_update(&this->hmac_ctx, data.ptr, data.len);
-	hmac_finish(&this->hmac_ctx, mac);
+	hmac_finish(&this->hmac_ctx, mac, &mac_len);
 
 	/* Re-initialize for next operation */
-	hmac_init(&this->hmac_ctx, this->hmac_ctx.key, this->hmac_ctx.key_size);
+	hmac_init(&this->hmac_ctx, &sm3_digest, this->key.ptr, this->key.len);
 
 	/* Compare */
 	buffer = signature.ptr;
@@ -113,15 +120,20 @@ METHOD(signer_t, get_block_size, size_t,
 METHOD(signer_t, set_key, bool,
 	private_gmsm_sm3_signer_t *this, chunk_t key)
 {
+	/* Store key for re-initialization */
+	chunk_clear(&this->key);
+	this->key = chunk_clone(key);
+	
 	/* Initialize HMAC-SM3 with the provided key */
-	hmac_init(&this->hmac_ctx, key.ptr, key.len);
+	hmac_init(&this->hmac_ctx, &sm3_digest, key.ptr, key.len);
 	return TRUE;
 }
 
 METHOD(signer_t, destroy, void,
 	private_gmsm_sm3_signer_t *this)
 {
-	/* Clean up HMAC context */
+	/* Clean up HMAC context and stored key */
+	chunk_clear(&this->key);
 	memwipe(&this->hmac_ctx, sizeof(this->hmac_ctx));
 	free(this);
 }

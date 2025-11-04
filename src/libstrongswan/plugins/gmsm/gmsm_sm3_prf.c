@@ -28,11 +28,18 @@ struct private_gmsm_sm3_prf_t {
 	 * GmSSL HMAC context
 	 */
 	HMAC_CTX hmac_ctx;
+
+	/**
+	 * Stored key for re-initialization
+	 */
+	chunk_t key;
 };
 
 METHOD(prf_t, get_bytes, bool,
 	private_gmsm_sm3_prf_t *this, chunk_t seed, uint8_t *buffer)
 {
+	size_t mac_len;
+	
 	if (buffer == NULL)
 	{
 		/* Process seed without generating output (for incremental hashing) */
@@ -42,10 +49,10 @@ METHOD(prf_t, get_bytes, bool,
 
 	/* Generate PRF output */
 	hmac_update(&this->hmac_ctx, seed.ptr, seed.len);
-	hmac_finish(&this->hmac_ctx, buffer);
+	hmac_finish(&this->hmac_ctx, buffer, &mac_len);
 
 	/* Re-initialize for next operation */
-	hmac_init(&this->hmac_ctx, this->hmac_ctx.key, this->hmac_ctx.key_size);
+	hmac_init(&this->hmac_ctx, &sm3_digest, this->key.ptr, this->key.len);
 
 	return TRUE;
 }
@@ -79,15 +86,20 @@ METHOD(prf_t, get_key_size, size_t,
 METHOD(prf_t, set_key, bool,
 	private_gmsm_sm3_prf_t *this, chunk_t key)
 {
+	/* Store key for re-initialization */
+	chunk_clear(&this->key);
+	this->key = chunk_clone(key);
+	
 	/* Initialize HMAC-SM3 with the provided key */
-	hmac_init(&this->hmac_ctx, key.ptr, key.len);
+	hmac_init(&this->hmac_ctx, &sm3_digest, key.ptr, key.len);
 	return TRUE;
 }
 
 METHOD(prf_t, destroy, void,
 	private_gmsm_sm3_prf_t *this)
 {
-	/* Clean up HMAC context */
+	/* Clean up HMAC context and stored key */
+	chunk_clear(&this->key);
 	memwipe(&this->hmac_ctx, sizeof(this->hmac_ctx));
 	free(this);
 }
