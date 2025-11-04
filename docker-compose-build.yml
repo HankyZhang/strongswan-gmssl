@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  strongswan-build:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    container_name: strongswan-gmsm-build
+    volumes:
+      - .:/strongswan
+    working_dir: /strongswan
+    command: >
+      /bin/bash -c "
+      echo 'strongSwan GMSM 编译环境已就绪';
+      echo '运行编译: bash docker-build.sh';
+      echo '运行测试: bash docker-test.sh';
+      /bin/bash
+      "
+    stdin_open: true
+    tty: true
+    networks:
+      - gmsm-network
+
+  strongswan-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    container_name: strongswan-gmsm-server
+    volumes:
+      - .:/strongswan
+    working_dir: /strongswan
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun
+    ports:
+      - "500:500/udp"
+      - "4500:4500/udp"
+    networks:
+      gmsm-network:
+        ipv4_address: 172.20.0.10
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+
+  strongswan-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    container_name: strongswan-gmsm-client
+    volumes:
+      - .:/strongswan
+    working_dir: /strongswan
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun
+    networks:
+      gmsm-network:
+        ipv4_address: 172.20.0.20
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+
+networks:
+  gmsm-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
