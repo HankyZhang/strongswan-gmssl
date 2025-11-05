@@ -1,0 +1,10 @@
+update-alternatives 2025-11-04 08:45:59: run with --quiet --install /usr/bin/pager pager /usr/bin/less 77 --slave /usr/share/man/man1/pager.1.gz pager.1.gz /usr/share/man/man1/less.1.gz
+update-alternatives 2025-11-04 08:45:59: link group pager updated to point to /usr/bin/less
+update-alternatives 2025-11-04 08:46:00: run with --install /usr/bin/rsh rsh /usr/bin/ssh 20 --slave /usr/share/man/man1/rsh.1.gz rsh.1.gz /usr/share/man/man1/ssh.1.gz
+update-alternatives 2025-11-04 08:46:00: link group rsh updated to point to /usr/bin/ssh
+update-alternatives 2025-11-04 08:46:00: run with --install /usr/bin/rlogin rlogin /usr/bin/slogin 20 --slave /usr/share/man/man1/rlogin.1.gz rlogin.1.gz /usr/share/man/man1/slogin.1.gz
+update-alternatives 2025-11-04 08:46:00: link group rlogin updated to point to /usr/bin/slogin
+update-alternatives 2025-11-04 08:46:00: run with --install /usr/bin/rcp rcp /usr/bin/scp 20 --slave /usr/share/man/man1/rcp.1.gz rcp.1.gz /usr/share/man/man1/scp.1.gz
+update-alternatives 2025-11-04 08:46:00: link group rcp updated to point to /usr/bin/scp
+update-alternatives 2025-11-04 08:46:00: run with --install /usr/bin/automake automake /usr/bin/automake-1.16 34 --slave /usr/bin/aclocal aclocal /usr/bin/aclocal-1.16 --slave /usr/share/man/man1/automake.1.gz automake.1.gz /usr/share/man/man1/automake-1.16.1.gz --slave /usr/share/man/man1/aclocal.1.gz aclocal.1.gz /usr/share/man/man1/aclocal-1.16.1.gz
+update-alternatives 2025-11-04 08:46:00: link group automake updated to point to /usr/bin/automake-1.16

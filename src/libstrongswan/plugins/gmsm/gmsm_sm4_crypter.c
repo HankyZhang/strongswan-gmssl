@@ -14,8 +14,7 @@
 #include <gmssl/sm4.h>
 #include <string.h>
 
-#define SM4_BLOCK_SIZE 16
-#define SM4_KEY_SIZE 16
+/* SM4_BLOCK_SIZE and SM4_KEY_SIZE are already defined in gmssl/sm4.h */
 
 typedef struct private_gmsm_sm4_crypter_t private_gmsm_sm4_crypter_t;
 
