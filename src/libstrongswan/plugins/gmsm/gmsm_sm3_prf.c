@@ -11,6 +11,7 @@
 
 #include <gmssl/hmac.h>
 #include <gmssl/sm3.h>
+#include <gmssl/digest.h>
 
 typedef struct private_gmsm_sm3_prf_t private_gmsm_sm3_prf_t;
 
