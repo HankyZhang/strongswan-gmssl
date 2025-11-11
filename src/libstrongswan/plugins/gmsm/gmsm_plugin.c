@@ -86,7 +86,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * Described in header
  */
-plugin_t *gmsm_plugin_create()
+PLUGIN_DEFINE(gmsm)
 {
 	private_gmsm_plugin_t *this;
 
