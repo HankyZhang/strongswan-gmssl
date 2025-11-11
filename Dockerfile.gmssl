@@ -105,8 +105,12 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     libsystemd0 \
     libcurl4 \
+    coreutils \
     && rm -rf /var/lib/apt/lists/* \
     && ldconfig
+
+# 复制默认配置文件
+COPY config/strongswan-docker-minimal.conf /etc/strongswan.conf
 
 # 配置环境变量
 ENV PATH="${INSTALL_PREFIX}/strongswan/bin:${INSTALL_PREFIX}/strongswan/sbin:${INSTALL_PREFIX}/bin:${PATH}" \
@@ -136,10 +140,10 @@ echo "==================================================================="\n\
 # 显示版本信息\n\
 echo ""\n\
 echo "GmSSL 版本:"\n\
-gmssl version\n\
+/usr/local/bin/gmssl version\n\
 echo ""\n\
 echo "strongSwan 版本:"\n\
-charon --version | head -3\n\
+/usr/local/strongswan/sbin/swanctl --version 2>&1 | head -3 || echo "swanctl version check skipped"\n\
 echo ""\n\
 \n\
 # 启用 IP 转发\n\

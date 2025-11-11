@@ -48,6 +48,18 @@ coverage/
 .project
 .metadata/
 .settings/
+
+# Temporary build files
+autom4te.cache/
+logs/
+
+# Compressed archives
+*.tar.gz
+*.tar.bz2
+*.zip
+
+# Temporary result files
+演示结果-*.txt
 /*.config
 /*.creator
 /*.creator.*
