@@ -56,7 +56,10 @@ ENUM_NEXT(encryption_algorithm_names, ENCR_UNDEFINED, ENCR_AES_CFB, ENCR_CHACHA2
 	"RC2_CBC",
 	"AES_ECB",
 	"AES_CFB");
-ENUM_END(encryption_algorithm_names, ENCR_AES_CFB);
+ENUM_NEXT(encryption_algorithm_names, ENCR_SM4_CBC, ENCR_SM4_GCM_ICV16, ENCR_AES_CFB,
+	"SM4_CBC",
+	"SM4_GCM_16");
+ENUM_END(encryption_algorithm_names, ENCR_SM4_GCM_ICV16);
 
 /*
  * Described in header.

@@ -66,11 +66,14 @@ RUN cd /tmp \
 # ============ 第三层: 编译 strongSwan (代码经常变化,使用 --build-arg 控制缓存) ============
 FROM gmssl-builder AS strongswan-builder
 ARG CACHE_BUST=1
+
+# 复制本地代码到容器 (使用修改后的代码)
+COPY . /tmp/strongswan-gmssl
+
 RUN echo "Cache bust: ${CACHE_BUST}" \
-    && cd /tmp \
-    && git clone --depth 1 --branch ${STRONGSWAN_BRANCH} ${STRONGSWAN_REPO} strongswan-gmssl \
-    && cd strongswan-gmssl \
-    && if [ -f "autogen.sh" ]; then ./autogen.sh; fi \
+    && cd /tmp/strongswan-gmssl \
+    && dos2unix scripts/* 2>/dev/null || true \
+    && if [ -f "autogen.sh" ]; then autoreconf -f -i; fi \
     && ./configure --prefix=${INSTALL_PREFIX}/strongswan \
         --sysconfdir=/etc \
         --enable-eap-identity \
@@ -110,7 +113,7 @@ RUN apt-get update && apt-get install -y \
     && ldconfig
 
 # 复制默认配置文件
-COPY config/strongswan-docker-minimal.conf /etc/strongswan.conf
+COPY config/strongswan.conf.gmsm /etc/strongswan.conf
 
 # 配置环境变量
 ENV PATH="${INSTALL_PREFIX}/strongswan/bin:${INSTALL_PREFIX}/strongswan/sbin:${INSTALL_PREFIX}/bin:${PATH}" \

@@ -10,6 +10,10 @@
  */
 
 #include "gmsm_plugin.h"
+
+#ifndef VERSION
+#define VERSION "6.0.3dr1"
+#endif
 #include "gmsm_sm3_hasher.h"
 #include "gmsm_sm4_crypter.h"
 #include "gmsm_sm2_private_key.h"
