@@ -75,6 +75,7 @@ RUN echo "Cache bust: ${CACHE_BUST}" \
     && dos2unix scripts/* 2>/dev/null || true \
     && dos2unix src/libstrongswan/asn1/oid.txt 2>/dev/null || true \
     && dos2unix src/libstrongswan/crypto/proposal/proposal_keywords_static.txt 2>/dev/null || true \
+    && rm -f src/libstrongswan/crypto/proposal/proposal_keywords_static.c \
     && touch src/libstrongswan/crypto/proposal/proposal_keywords_static.txt \
     && ./configure --prefix=${INSTALL_PREFIX}/strongswan \
         --sysconfdir=/etc \
