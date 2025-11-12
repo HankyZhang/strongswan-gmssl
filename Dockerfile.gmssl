@@ -73,6 +73,7 @@ COPY . /tmp/strongswan-gmssl
 RUN echo "Cache bust: ${CACHE_BUST}" \
     && cd /tmp/strongswan-gmssl \
     && dos2unix scripts/* 2>/dev/null || true \
+    && dos2unix src/libstrongswan/asn1/oid.txt 2>/dev/null || true \
     && ./configure --prefix=${INSTALL_PREFIX}/strongswan \
         --sysconfdir=/etc \
         --enable-eap-identity \
