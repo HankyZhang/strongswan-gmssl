@@ -73,7 +73,6 @@ COPY . /tmp/strongswan-gmssl
 RUN echo "Cache bust: ${CACHE_BUST}" \
     && cd /tmp/strongswan-gmssl \
     && dos2unix scripts/* 2>/dev/null || true \
-    && if [ -f "autogen.sh" ]; then autoreconf -f -i; fi \
     && ./configure --prefix=${INSTALL_PREFIX}/strongswan \
         --sysconfdir=/etc \
         --enable-eap-identity \
