@@ -3,9 +3,6 @@
 # 日期: 2025-10-30
 
 charon {
-    # 加载模块化配置
-    load_modular = yes
-    
     # 线程池设置
     threads = 16
     
@@ -108,11 +105,6 @@ charon {
             cfg = 2
         }
     }
-}
-
-# swanctl 配置
-swanctl {
-    load = yes
 }
 
 # 库配置
