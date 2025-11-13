@@ -59,7 +59,9 @@ METHOD(plugin_t, get_features, int,
 		/* SM4 crypter */
 		PLUGIN_REGISTER(CRYPTER, gmsm_sm4_crypter_create),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_SM4_CBC, 16),
-			PLUGIN_PROVIDE(CRYPTER, ENCR_SM4_GCM_ICV16, 16),
+		/* SM4 GCM AEAD */
+		PLUGIN_REGISTER(AEAD, gmsm_sm4_gcm_aead_create),
+			PLUGIN_PROVIDE(AEAD, ENCR_SM4_GCM_ICV16, 16),
 		/* SM2 Diffie-Hellman */
 		PLUGIN_REGISTER(KE, gmsm_sm2_dh_create),
 			PLUGIN_PROVIDE(KE, SM2_256),

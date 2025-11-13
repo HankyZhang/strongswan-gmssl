@@ -17,6 +17,7 @@ libstrongswan_gmsm_la_SOURCES = \
 	gmsm_sm3_signer.h gmsm_sm3_signer.c \
 	gmsm_sm3_prf.h gmsm_sm3_prf.c \
 	gmsm_sm4_crypter.h gmsm_sm4_crypter.c \
+	gmsm_sm4_gcm_aead.h gmsm_sm4_gcm_aead.c \
 	gmsm_sm2_private_key.h gmsm_sm2_private_key.c \
 	gmsm_sm2_public_key.h gmsm_sm2_public_key.c \
 	gmsm_sm2_dh.h gmsm_sm2_dh.c
