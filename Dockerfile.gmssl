@@ -72,6 +72,8 @@ COPY . /tmp/strongswan-gmssl
 
 RUN echo "Cache bust: ${CACHE_BUST}" \
     && cd /tmp/strongswan-gmssl \
+    && echo "[INFO] Running autoreconf to ensure regenerated build files (including gperf outputs)" \
+    && autoreconf -f -i \
     && dos2unix scripts/* 2>/dev/null || true \
     && dos2unix src/libstrongswan/asn1/oid.txt 2>/dev/null || true \
     && dos2unix src/libstrongswan/crypto/proposal/proposal_keywords_static.txt 2>/dev/null || true \
