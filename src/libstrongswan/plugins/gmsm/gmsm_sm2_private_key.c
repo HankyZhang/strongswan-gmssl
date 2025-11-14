@@ -269,6 +269,7 @@ gmsm_sm2_private_key_t *gmsm_sm2_private_key_load(key_type_t type, va_list args)
 {
 	private_gmsm_sm2_private_key_t *this;
 	chunk_t blob = chunk_empty;
+	DBG1(DBG_LIB, "SM2 private loader entered (type=%d)", type);
 
 	while (TRUE)
 	{
@@ -277,6 +278,7 @@ gmsm_sm2_private_key_t *gmsm_sm2_private_key_load(key_type_t type, va_list args)
 			case BUILD_BLOB_ASN1_DER:
 			case BUILD_BLOB_PEM:
 				blob = va_arg(args, chunk_t);
+				DBG1(DBG_LIB, "SM2 private loader got blob part len=%zu", blob.len);
 				continue;
 			case BUILD_END:
 				break;
@@ -293,48 +295,114 @@ gmsm_sm2_private_key_t *gmsm_sm2_private_key_load(key_type_t type, va_list args)
 
 	this = gmsm_sm2_private_key_create_empty();
 
-	/* Try PEM first */
-	SM2_KEY sm2_tmp;
-	memset(&sm2_tmp, 0, sizeof(sm2_tmp));
-	BIO *bio = BIO_new_mem_buf(blob.ptr, blob.len);
-	if (bio)
+	DBG1(DBG_LIB, "SM2 load: received blob len=%zu", blob.len);
+	/* 支持的格式顺序:
+	 * 1) PEM PKCS#8 (sm2_private_key_info_from_pem)
+	 * 2) PEM ECPrivateKey   (sm2_private_key_from_pem)
+	 * 3) DER PKCS#8         (sm2_private_key_info_from_der)
+	 * 4) DER ECPrivateKey   (sm2_private_key_from_der)
+	 * 暂时移除原始私钥与复合格式回退, 以便缩小问题范围
+	 */
+
+	/* Create a memory FILE for PEM parsing if blob looks like text */
+	bool looks_pem = blob.len > 16 && memchr(blob.ptr, '-', blob.len) && memchr(blob.ptr, '\n', blob.len);
+	DBG1(DBG_LIB, "SM2 load: looks_pem=%d", looks_pem);
+				if (looks_pem)
 	{
-		/* Attempt to read unencrypted PKCS#8 or traditional SM2 PEM */
-		EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
-		if (pkey)
+		/* Log first line of PEM for diagnostics */
+		char first_line[128];
+		size_t i;
+		for (i = 0; i < sizeof(first_line)-1 && i < blob.len; i++)
 		{
-			/* Extract EC key assuming SM2 curve */
-			EC_KEY *ec = EVP_PKEY_get1_EC_KEY(pkey);
-			if (ec)
-			{
-				const EC_GROUP *group = EC_KEY_get0_group(ec);
-				const EC_POINT *point = EC_KEY_get0_public_key(ec);
-				const BIGNUM *priv = EC_KEY_get0_private_key(ec);
-				if (group && point && priv)
-				{
-					/* Convert EC_POINT to octets */
-					uint8_t buf[65];
-					size_t len = EC_POINT_point2oct(group, point, POINT_CONVERSION_UNCOMPRESSED, buf, sizeof(buf), NULL);
-					if (len == 65)
-					{
-						/* Set key values into GmSSL SM2_KEY structure */
-						if (sm2_key_set_private_key(&this->key, priv) == 1 && sm2_key_set_public_key(&this->key, buf, len) == 1)
-						{
-							this->key_set = TRUE;
-						}
-					}
-				}
-				EC_KEY_free(ec);
-			}
-			EVP_PKEY_free(pkey);
+			if (blob.ptr[i] == '\n' || blob.ptr[i] == '\r')
+				break;
+			first_line[i] = blob.ptr[i];
 		}
-		BIO_free(bio);
+		first_line[i] = '\0';
+		DBG1(DBG_LIB, "SM2 load: PEM header line: %s", first_line);
 	}
+	else
+	{
+		/* Show first up to 32 bytes of DER hex */
+		char hexbuf[3*32+1];
+		size_t hlen = blob.len < 32 ? blob.len : 32;
+		size_t j;
+		for (j = 0; j < hlen; j++)
+		{
+			snprintf(hexbuf + 3*j, sizeof(hexbuf) - 3*j, "%02X ", blob.ptr[j]);
+		}
+		hexbuf[3*hlen] = '\0';
+		DBG1(DBG_LIB, "SM2 load: DER first bytes: %s", hexbuf);
+	}
+	if (looks_pem)
+	{
+		char *tmp = NULL;
+		FILE *fp = NULL;
+		/* Ensure NUL termination */
+		tmp = malloc(blob.len + 1);
+		if (tmp)
+		{
+			memcpy(tmp, blob.ptr, blob.len);
+			tmp[blob.len] = '\0';
+			fp = fmemopen(tmp, blob.len, "r");
+		}
+		if (fp)
+		{
+			/* Try PKCS#8 first */
+						if (sm2_private_key_info_from_pem(&this->key, fp) == 1)
+			{
+				DBG1(DBG_LIB, "SM2 load: PKCS#8 PEM parsed successfully");
+				this->key_set = TRUE;
+			}
+			rewind(fp);
+			if (!this->key_set && sm2_private_key_from_pem(&this->key, fp) == 1)
+			{
+				DBG1(DBG_LIB, "SM2 load: traditional ECPrivateKey PEM parsed successfully");
+				this->key_set = TRUE;
+			}
+			fclose(fp);
+		}
+		if (tmp)
+		{
+			free(tmp);
+		}
+	}
+
 	if (!this->key_set)
 	{
-		/* Fall back: treat blob as raw (unsupported), fail gracefully */
-		destroy(this);
-		return NULL;
+		/* Try DER variants */
+		const uint8_t *p = blob.ptr;
+		size_t len = blob.len;
+		const uint8_t *attrs = NULL; /* ignore attributes */
+		size_t attrs_len = 0;
+		if (sm2_private_key_info_from_der(&this->key, &attrs, &attrs_len, &p, &len) == 1 && len == 0)
+		{
+			DBG1(DBG_LIB, "SM2 load: PKCS#8 DER parsed successfully");
+			this->key_set = TRUE;
+		}
+		if (!this->key_set)
+		{
+			/* Reset pointer for second try */
+			p = blob.ptr;
+			len = blob.len;
+						if (sm2_private_key_from_der(&this->key, &p, &len) == 1 && len == 0)
+			{
+				DBG1(DBG_LIB, "SM2 load: ECPrivateKey DER parsed successfully");
+				this->key_set = TRUE;
+			}
+		}
+	}
+
+	if (!this->key_set)
+	{
+		DBG1(DBG_LIB, "SM2 load: all parsing attempts failed");
+	}
+
+	if (!this->key_set)
+	{
+	DBG1(DBG_LIB, "SM2 load: returning NULL (parse failure)");
+	destroy(this);
+	return NULL;
 	}
 	return &this->public;
 }

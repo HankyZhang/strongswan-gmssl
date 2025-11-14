@@ -68,18 +68,18 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(KE, gmsm_sm2_dh_create),
 			PLUGIN_PROVIDE(KE, SM2_256),
 				PLUGIN_DEPENDS(RNG, RNG_STRONG),
-		/* SM2 private key */
+		/* SM2 key registration re-enabled for debug */
+		#define ENABLE_SM2_KEYS 1
+		#ifdef ENABLE_SM2_KEYS
 		PLUGIN_REGISTER(PRIVKEY, gmsm_sm2_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_SM2),
-				/* SM2 signature scheme */
 				PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_SM2_WITH_SM3),
 		PLUGIN_REGISTER(PRIVKEY_GEN, gmsm_sm2_private_key_gen, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_SM2),
-		/* SM2 public key */
 		PLUGIN_REGISTER(PUBKEY, gmsm_sm2_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_SM2),
-				/* SM2 verify scheme */
 				PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_SM2_WITH_SM3),
+#endif
 	};
 	*features = f;
 	return countof(f);

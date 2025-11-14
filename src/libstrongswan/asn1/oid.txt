@@ -13,6 +13,12 @@
           0xF2               ""
             0x2C             ""
               0x64           "pilot"
+
+  0x7C                         "sm2"
+    0x94                       "crypto"
+      0xC5                     "alg"
+        0x01                   "sm2p256v1"                OID_SM2_CURVE
+        0x02                   "sm2sign-with-sm3"         OID_SM2_WITH_SM3
                 0x01         "pilotAttributeType"
                   0x01       "UID"						OID_PILOT_USERID
                   0x19       "DC"						OID_PILOT_DOMAIN_COMPONENT

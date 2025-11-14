@@ -191,6 +191,7 @@ gmsm_sm2_public_key_t *gmsm_sm2_public_key_load(key_type_t type, va_list args)
 {
 	private_gmsm_sm2_public_key_t *this;
 	chunk_t blob = chunk_empty;
+	DBG1(DBG_LIB, "SM2 public loader entered (type=%d)", type);
 
 	while (TRUE)
 	{
@@ -199,6 +200,7 @@ gmsm_sm2_public_key_t *gmsm_sm2_public_key_load(key_type_t type, va_list args)
 			case BUILD_BLOB_ASN1_DER:
 			case BUILD_BLOB_PEM:
 				blob = va_arg(args, chunk_t);
+				DBG1(DBG_LIB, "SM2 public loader got blob part len=%zu", blob.len);
 				continue;
 			case BUILD_END:
 				break;
@@ -232,34 +234,69 @@ gmsm_sm2_public_key_t *gmsm_sm2_public_key_load(key_type_t type, va_list args)
 		.key_set = FALSE,
 	);
 
-	BIO *bio = BIO_new_mem_buf(blob.ptr, blob.len);
-	if (bio)
+	DBG1(DBG_LIB, "SM2 public load: blob len=%zu", blob.len);
+	bool looks_pem = blob.len > 16 && memchr(blob.ptr, '-', blob.len) && memchr(blob.ptr, '\n', blob.len);
+	DBG1(DBG_LIB, "SM2 public load: looks_pem=%d", looks_pem);
+	if (looks_pem)
 	{
-		EVP_PKEY *pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
-		if (pkey)
+		char first_line[128];
+		size_t i;
+		for (i = 0; i < sizeof(first_line)-1 && i < blob.len; i++)
 		{
-			EC_KEY *ec = EVP_PKEY_get1_EC_KEY(pkey);
-			if (ec)
-			{
-				const EC_GROUP *group = EC_KEY_get0_group(ec);
-				const EC_POINT *point = EC_KEY_get0_public_key(ec);
-				if (group && point)
-				{
-					uint8_t buf[65];
-					size_t len = EC_POINT_point2oct(group, point, POINT_CONVERSION_UNCOMPRESSED, buf, sizeof(buf), NULL);
-					if (len == 65 && sm2_key_set_public_key(&this->key, buf, len) == 1)
-					{
-						this->key_set = TRUE;
-					}
-				}
-				EC_KEY_free(ec);
-			}
-			EVP_PKEY_free(pkey);
+			if (blob.ptr[i] == '\n' || blob.ptr[i] == '\r')
+				break;
+			first_line[i] = blob.ptr[i];
 		}
-		BIO_free(bio);
+		first_line[i] = '\0';
+		DBG1(DBG_LIB, "SM2 public load: PEM header line: %s", first_line);
 	}
+	else
+	{
+		char hexbuf[3*32+1];
+		size_t hlen = blob.len < 32 ? blob.len : 32;
+		size_t j;
+		for (j = 0; j < hlen; j++)
+		{
+			snprintf(hexbuf + 3*j, sizeof(hexbuf) - 3*j, "%02X ", blob.ptr[j]);
+		}
+		hexbuf[3*hlen] = '\0';
+		DBG1(DBG_LIB, "SM2 public load: DER first bytes: %s", hexbuf);
+	}
+	if (looks_pem)
+	{
+		char *tmp = malloc(blob.len + 1);
+		if (tmp)
+		{
+			memcpy(tmp, blob.ptr, blob.len);
+			tmp[blob.len] = '\0';
+			FILE *fp = fmemopen(tmp, blob.len, "r");
+			if (fp)
+			{
+				if (sm2_public_key_info_from_pem(&this->key, fp) == 1)
+				{
+					DBG1(DBG_LIB, "SM2 public load: PEM SubjectPublicKeyInfo parsed successfully");
+					this->key_set = TRUE;
+				}
+				fclose(fp);
+			}
+			free(tmp);
+		}
+	}
+
 	if (!this->key_set)
 	{
+		const uint8_t *p = blob.ptr;
+		size_t len = blob.len;
+		if (sm2_public_key_info_from_der(&this->key, &p, &len) == 1 && len == 0)
+		{
+			DBG1(DBG_LIB, "SM2 public load: DER SubjectPublicKeyInfo parsed successfully");
+			this->key_set = TRUE;
+		}
+	}
+
+	if (!this->key_set)
+	{
+		DBG1(DBG_LIB, "SM2 public load: parse failure");
 		destroy(this);
 		return NULL;
 	}

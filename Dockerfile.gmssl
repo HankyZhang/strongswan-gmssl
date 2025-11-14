@@ -161,23 +161,20 @@ if [ -f /etc/swanctl/swanctl.conf ]; then\n\
 else\n\
     echo "  (无 swanctl.conf)"\n\
 fi\n\
-echo "[INFO] 启动 ipsec (charon via starter)..."\n\
-/usr/local/strongswan/sbin/ipsec start 2>&1 | tee /var/log/ipsec-start.log || true\n\
-sleep 2\n\
-if [ ! -S /var/run/charon.vici ]; then\n\
-    echo "[WARN] VICI socket 未生成, 尝试直接启动 charon"\n\
-    /usr/local/strongswan/libexec/ipsec/charon 2>&1 | tee /var/log/charon-direct.log &\n\
-    sleep 2\n\
-fi\n\
+echo "[INFO] 直接启动 charon (无需 starter)"\n\
+/usr/local/strongswan/libexec/ipsec/charon --debug-dmn 1 --debug-ike 1 --debug-lib 1 --debug-cfg 1 --debug-asn 1 --debug-enc 1 --debug-chd 1 --debug-net 1 --debug-knl 1 2>&1 | tee /var/log/charon.log &\n\
+sleep 3\n\
 if [ -S /var/run/charon.vici ]; then\n\
-    echo "[INFO] VICI socket 就绪"\n\
+    echo "[INFO] VICI socket 就绪, 加载凭据"\n\
+    swanctl --load-creds || true\n\
+    echo "[INFO] 列出证书"\n\
+    swanctl --list-certs || true\n\
 else\n\
-    echo "[ERROR] 仍未检测到 VICI socket, 日志如下:"\n\
+    echo "[ERROR] VICI socket 未就绪"\n\
     ls -l /var/run || true\n\
-    tail -n 40 /var/log/ipsec-start.log 2>/dev/null || true\n\
 fi\n\
-echo "[INFO] 保持前台"\n\
-tail -f /var/log/ipsec-start.log /var/log/charon-direct.log 2>/dev/null\n\
+echo "[INFO] 保持前台 (tail charon.log)"\n\
+tail -f /var/log/charon.log 2>/dev/null\n\
 ' > /start.sh \
         && chmod +x /start.sh
 

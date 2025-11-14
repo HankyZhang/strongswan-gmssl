@@ -171,6 +171,14 @@ if [ -f serverkey-pkcs8.pem ]; then
     echo "✓ 服务器 PKCS#8 私钥: ${PRIVATE_DIR}/serverkey-pkcs8.pem"
 fi
 
+# 生成未加密 PKCS#8 服务器私钥 (无密码，便于 strongSwan 加载)
+gmssl pkcs8 -topkcs8 -in server_key.pem -pass "${SERVER_PASS}" -out serverkey-plain-pkcs8.pem || true
+if [ -f serverkey-plain-pkcs8.pem ]; then
+    cp serverkey-plain-pkcs8.pem "${PRIVATE_DIR}/serverkey-plain-pkcs8.pem"
+    chmod 600 "${PRIVATE_DIR}/serverkey-plain-pkcs8.pem"
+    echo "✓ 服务器 未加密PKCS#8 私钥: ${PRIVATE_DIR}/serverkey-plain-pkcs8.pem"
+fi
+
 # 客户端证书和私钥
 cp client_cert.pem "${X509_DIR}/clientcert.pem"
 cp client_key.pem "${PRIVATE_DIR}/clientkey.pem"
@@ -185,6 +193,14 @@ if [ -f clientkey-pkcs8.pem ]; then
     cp clientkey-pkcs8.pem "${PRIVATE_DIR}/clientkey-pkcs8.pem"
     chmod 600 "${PRIVATE_DIR}/clientkey-pkcs8.pem"
     echo "✓ 客户端 PKCS#8 私钥: ${PRIVATE_DIR}/clientkey-pkcs8.pem"
+fi
+
+# 生成未加密 PKCS#8 客户端私钥
+gmssl pkcs8 -topkcs8 -in client_key.pem -pass "${CLIENT_PASS}" -out clientkey-plain-pkcs8.pem || true
+if [ -f clientkey-plain-pkcs8.pem ]; then
+    cp clientkey-plain-pkcs8.pem "${PRIVATE_DIR}/clientkey-plain-pkcs8.pem"
+    chmod 600 "${PRIVATE_DIR}/clientkey-plain-pkcs8.pem"
+    echo "✓ 客户端 未加密PKCS#8 私钥: ${PRIVATE_DIR}/clientkey-plain-pkcs8.pem"
 fi
 
 # 重新标准化证书 PEM（如需）
@@ -264,3 +280,31 @@ EOF
 echo "密码信息已保存到: /tmp/cert_passwords.txt"
 echo "⚠️  请妥善保管此文件，包含私钥密码！"
 echo ""
+
+# ================= 诊断信息输出 =================
+DIAG_FILE="${X509_DIR}/_diagnostic.txt"
+echo "生成诊断文件: ${DIAG_FILE}" > "${DIAG_FILE}"
+{
+    echo "==== GmSSL certparse (server) ===="
+    gmssl certparse -in server_cert.pem || true
+    echo
+    echo "==== GmSSL certparse (client) ===="
+    gmssl certparse -in client_cert.pem || true
+    echo
+    echo "==== DER Hex (first 40 lines) server ===="
+    gmssl x509 -in server_cert.pem -outform DER | hexdump -C | head -n 40 || true
+    echo
+    echo "==== DER Hex (first 40 lines) client ===="
+    gmssl x509 -in client_cert.pem -outform DER | hexdump -C | head -n 40 || true
+    echo
+    echo "==== SubjectPublicKeyInfo (server) raw ===="
+    gmssl certparse -in server_cert.pem | awk '/SubjectPublicKeyInfo/{flag=1;next}/Attributes/{flag=0}flag' || true
+    echo
+    echo "==== Signature Algorithm OID (server) ===="
+    gmssl certparse -in server_cert.pem | grep -i 'Signature Algorithm' || true
+    echo
+    echo "==== Signature Algorithm OID (client) ===="
+    gmssl certparse -in client_cert.pem | grep -i 'Signature Algorithm' || true
+} >> "${DIAG_FILE}"
+chmod 644 "${DIAG_FILE}"
+echo "✓ 诊断信息已写入 ${DIAG_FILE}"; echo ""

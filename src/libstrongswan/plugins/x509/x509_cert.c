@@ -1402,6 +1402,17 @@ static bool parse_certificate(private_x509_cert_t *this)
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		u_int level = parser->get_level(parser)+1;
+		/* Debug: log each ASN.1 object encountered */
+		{
+			char hexbuf[3*24+1];
+			size_t hlen = object.len < 24 ? object.len : 24;
+			for (size_t i=0;i<hlen;i++)
+			{
+				snprintf(hexbuf+3*i, sizeof(hexbuf)-3*i, "%02X ", object.ptr[i]);
+			}
+			hexbuf[3*hlen] = '\0';
+			DBG1(DBG_ASN, "parse loop: objID=%d level=%u len=%zu first=%s", objectID, level, object.len, hexbuf);
+		}
 
 		switch (objectID)
 		{
@@ -1446,8 +1457,41 @@ static bool parse_certificate(private_x509_cert_t *this)
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_INFO:
 				DBG2(DBG_ASN, "-- > --");
+				/* Dump first 64 bytes of SubjectPublicKeyInfo for SM2 debugging */
+				{
+					char hexbuf[3*64+1];
+					size_t hlen = object.len < 64 ? object.len : 64;
+					for (size_t k=0;k<hlen;k++)
+					{
+						snprintf(hexbuf+3*k, sizeof(hexbuf)-3*k, "%02X ", object.ptr[k]);
+					}
+					hexbuf[3*hlen] = '\0';
+					DBG1(DBG_ASN, "SubjectPublicKeyInfo first bytes: %s", hexbuf);
+				}
+				/* Try generic first */
 				this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 						KEY_ANY, BUILD_BLOB_ASN1_DER, object, BUILD_END);
+				if (!this->public_key)
+				{
+					DBG1(DBG_ASN, "public key generic parse failed");
+				}
+				else if (this->public_key->get_type(this->public_key) == KEY_ANY)
+				{
+					/* Proper ASN.1 parse of AlgorithmIdentifier parameters to detect SM2 curve */
+					chunk_t params;
+					int alg_oid = asn1_parse_algorithmIdentifier(object, 0, &params);
+					if (alg_oid != OID_UNKNOWN)
+					{
+						int curve_oid = asn1_known_oid(params);
+						if (curve_oid == OID_SM2_CURVE)
+						{
+							DBG1(DBG_ASN, "SM2 curve detected via AlgorithmIdentifier params OID_SM2_CURVE, retry with KEY_SM2");
+							DESTROY_IF(this->public_key);
+							this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
+									KEY_SM2, BUILD_BLOB_ASN1_DER, object, BUILD_END);
+						}
+					}
+				}
 				DBG2(DBG_ASN, "-- < --");
 				if (this->public_key == NULL)
 				{
@@ -1586,8 +1630,21 @@ static bool parse_certificate(private_x509_cert_t *this)
 				INIT(this->scheme);
 				if (!signature_params_parse(object, level, this->scheme))
 				{
-					DBG1(DBG_ASN, "  unable to parse signature algorithm");
-					goto end;
+					/* Fallback: sm2sign-with-sm3 OID DER sequence (1.2.156.10197.1.501)
+					 * Actual OID bytes after tag/length: 2A 81 1C D0 37 65 01 F5 (8 bytes)
+					 * Tag=0x06, length=0x08 -> total 10 bytes
+					 */
+					static const uint8_t sm2_sig_oid_der[] = {0x06,0x08,0x2A,0x81,0x1C,0xD0,0x37,0x65,0x01,0xF5};
+					if (memmem(object.ptr, object.len, sm2_sig_oid_der, sizeof(sm2_sig_oid_der)))
+					{
+						DBG1(DBG_ASN, "detected SM2 signature OID via fallback");
+						this->scheme->scheme = SIGN_SM2_WITH_SM3;
+					}
+					else
+					{
+						DBG1(DBG_ASN, "  unable to parse signature algorithm");
+						goto end;
+					}
 				}
 				if (!signature_params_equal(this->scheme, &sig_alg))
 				{
