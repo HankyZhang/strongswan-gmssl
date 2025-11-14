@@ -168,7 +168,7 @@ else\n\
     echo "  (无 swanctl.conf)"\n\
 fi\n\
 echo "[INFO] 直接启动 charon (无需 starter)"\n\
-/usr/local/strongswan/libexec/ipsec/charon --debug-dmn 1 --debug-ike 1 --debug-lib 1 --debug-cfg 1 --debug-asn 1 --debug-enc 1 --debug-chd 1 --debug-net 1 --debug-knl 1 2>&1 | tee /var/log/charon.log &\n\
+/usr/local/strongswan/libexec/ipsec/charon --debug-dmn 1 --debug-ike 1 --debug-lib 2 --debug-cfg 1 --debug-asn 2 --debug-enc 1 --debug-chd 1 --debug-net 1 --debug-knl 1 2>&1 | tee /var/log/charon.log &\n\
 sleep 3\n\
 if [ -S /var/run/charon.vici ]; then\n\
     echo "[INFO] VICI socket 就绪, 加载凭据"\n\
