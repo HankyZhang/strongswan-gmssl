@@ -232,8 +232,36 @@ gmsm_sm2_public_key_t *gmsm_sm2_public_key_load(key_type_t type, va_list args)
 		.key_set = FALSE,
 	);
 
-	/* TODO: Parse PEM/DER format and load into SM2_KEY */
-	/* For now, just fail gracefully */
-	destroy(this);
-	return NULL;
+	BIO *bio = BIO_new_mem_buf(blob.ptr, blob.len);
+	if (bio)
+	{
+		EVP_PKEY *pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+		if (pkey)
+		{
+			EC_KEY *ec = EVP_PKEY_get1_EC_KEY(pkey);
+			if (ec)
+			{
+				const EC_GROUP *group = EC_KEY_get0_group(ec);
+				const EC_POINT *point = EC_KEY_get0_public_key(ec);
+				if (group && point)
+				{
+					uint8_t buf[65];
+					size_t len = EC_POINT_point2oct(group, point, POINT_CONVERSION_UNCOMPRESSED, buf, sizeof(buf), NULL);
+					if (len == 65 && sm2_key_set_public_key(&this->key, buf, len) == 1)
+					{
+						this->key_set = TRUE;
+					}
+				}
+				EC_KEY_free(ec);
+			}
+			EVP_PKEY_free(pkey);
+		}
+		BIO_free(bio);
+	}
+	if (!this->key_set)
+	{
+		destroy(this);
+		return NULL;
+	}
+	return &this->public;
 }

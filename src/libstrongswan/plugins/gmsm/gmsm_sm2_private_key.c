@@ -293,8 +293,48 @@ gmsm_sm2_private_key_t *gmsm_sm2_private_key_load(key_type_t type, va_list args)
 
 	this = gmsm_sm2_private_key_create_empty();
 
-	/* TODO: Parse PEM/DER format and load into SM2_KEY */
-	/* For now, just fail gracefully */
-	destroy(this);
-	return NULL;
+	/* Try PEM first */
+	SM2_KEY sm2_tmp;
+	memset(&sm2_tmp, 0, sizeof(sm2_tmp));
+	BIO *bio = BIO_new_mem_buf(blob.ptr, blob.len);
+	if (bio)
+	{
+		/* Attempt to read unencrypted PKCS#8 or traditional SM2 PEM */
+		EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
+		if (pkey)
+		{
+			/* Extract EC key assuming SM2 curve */
+			EC_KEY *ec = EVP_PKEY_get1_EC_KEY(pkey);
+			if (ec)
+			{
+				const EC_GROUP *group = EC_KEY_get0_group(ec);
+				const EC_POINT *point = EC_KEY_get0_public_key(ec);
+				const BIGNUM *priv = EC_KEY_get0_private_key(ec);
+				if (group && point && priv)
+				{
+					/* Convert EC_POINT to octets */
+					uint8_t buf[65];
+					size_t len = EC_POINT_point2oct(group, point, POINT_CONVERSION_UNCOMPRESSED, buf, sizeof(buf), NULL);
+					if (len == 65)
+					{
+						/* Set key values into GmSSL SM2_KEY structure */
+						if (sm2_key_set_private_key(&this->key, priv) == 1 && sm2_key_set_public_key(&this->key, buf, len) == 1)
+						{
+							this->key_set = TRUE;
+						}
+					}
+				}
+				EC_KEY_free(ec);
+			}
+			EVP_PKEY_free(pkey);
+		}
+		BIO_free(bio);
+	}
+	if (!this->key_set)
+	{
+		/* Fall back: treat blob as raw (unsupported), fail gracefully */
+		destroy(this);
+		return NULL;
+	}
+	return &this->public;
 }
