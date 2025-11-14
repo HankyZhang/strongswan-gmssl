@@ -51,9 +51,9 @@ echo ""
 
 # 创建目录
 echo "[1/6] 创建证书目录..."
-sudo mkdir -p "${CA_DIR}" "${X509_DIR}" "${PRIVATE_DIR}"
-sudo chmod 755 "${CA_DIR}" "${X509_DIR}"
-sudo chmod 700 "${PRIVATE_DIR}"
+mkdir -p "${CA_DIR}" "${X509_DIR}" "${PRIVATE_DIR}"
+chmod 755 "${CA_DIR}" "${X509_DIR}"
+chmod 700 "${PRIVATE_DIR}"
 echo "✓ 目录创建完成"
 echo ""
 
@@ -151,25 +151,55 @@ echo ""
 echo "[5/6] 安装证书到 strongSwan 目录..."
 
 # CA 证书
-sudo cp ca_cert.pem "${CA_DIR}/cacert.pem"
-sudo chmod 644 "${CA_DIR}/cacert.pem"
+cp ca_cert.pem "${CA_DIR}/cacert.pem"
+chmod 644 "${CA_DIR}/cacert.pem"
 echo "✓ CA 证书: ${CA_DIR}/cacert.pem"
 
 # 服务器证书和私钥
-sudo cp server_cert.pem "${X509_DIR}/servercert.pem"
-sudo cp server_key.pem "${PRIVATE_DIR}/serverkey.pem"
-sudo chmod 644 "${X509_DIR}/servercert.pem"
-sudo chmod 600 "${PRIVATE_DIR}/serverkey.pem"
+cp server_cert.pem "${X509_DIR}/servercert.pem"
+cp server_key.pem "${PRIVATE_DIR}/serverkey.pem"
+chmod 644 "${X509_DIR}/servercert.pem"
+chmod 600 "${PRIVATE_DIR}/serverkey.pem"
 echo "✓ 服务器证书: ${X509_DIR}/servercert.pem"
 echo "✓ 服务器私钥: ${PRIVATE_DIR}/serverkey.pem"
 
+# 转换服务器私钥为 PKCS#8 (strongSwan 更易解析)
+gmssl pkcs8 -topkcs8 -in server_key.pem -pass "${SERVER_PASS}" -out serverkey-pkcs8.pem -outpass "${SERVER_PASS}" || true
+if [ -f serverkey-pkcs8.pem ]; then
+    cp serverkey-pkcs8.pem "${PRIVATE_DIR}/serverkey-pkcs8.pem"
+    chmod 600 "${PRIVATE_DIR}/serverkey-pkcs8.pem"
+    echo "✓ 服务器 PKCS#8 私钥: ${PRIVATE_DIR}/serverkey-pkcs8.pem"
+fi
+
 # 客户端证书和私钥
-sudo cp client_cert.pem "${X509_DIR}/clientcert.pem"
-sudo cp client_key.pem "${PRIVATE_DIR}/clientkey.pem"
-sudo chmod 644 "${X509_DIR}/clientcert.pem"
-sudo chmod 600 "${PRIVATE_DIR}/clientkey.pem"
+cp client_cert.pem "${X509_DIR}/clientcert.pem"
+cp client_key.pem "${PRIVATE_DIR}/clientkey.pem"
+chmod 644 "${X509_DIR}/clientcert.pem"
+chmod 600 "${PRIVATE_DIR}/clientkey.pem"
 echo "✓ 客户端证书: ${X509_DIR}/clientcert.pem"
 echo "✓ 客户端私钥: ${PRIVATE_DIR}/clientkey.pem"
+
+# 转换客户端私钥为 PKCS#8
+gmssl pkcs8 -topkcs8 -in client_key.pem -pass "${CLIENT_PASS}" -out clientkey-pkcs8.pem -outpass "${CLIENT_PASS}" || true
+if [ -f clientkey-pkcs8.pem ]; then
+    cp clientkey-pkcs8.pem "${PRIVATE_DIR}/clientkey-pkcs8.pem"
+    chmod 600 "${PRIVATE_DIR}/clientkey-pkcs8.pem"
+    echo "✓ 客户端 PKCS#8 私钥: ${PRIVATE_DIR}/clientkey-pkcs8.pem"
+fi
+
+# 重新标准化证书 PEM（如需）
+gmssl x509 -in server_cert.pem -out servercert-std.pem -outform PEM || true
+gmssl x509 -in client_cert.pem -out clientcert-std.pem -outform PEM || true
+if [ -f servercert-std.pem ]; then
+    cp servercert-std.pem "${X509_DIR}/servercert-std.pem"
+    chmod 644 "${X509_DIR}/servercert-std.pem"
+    echo "✓ 标准化服务器证书: ${X509_DIR}/servercert-std.pem"
+fi
+if [ -f clientcert-std.pem ]; then
+    cp clientcert-std.pem "${X509_DIR}/clientcert-std.pem"
+    chmod 644 "${X509_DIR}/clientcert-std.pem"
+    echo "✓ 标准化客户端证书: ${X509_DIR}/clientcert-std.pem"
+fi
 
 echo ""
 

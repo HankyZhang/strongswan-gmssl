@@ -187,6 +187,7 @@ bool encryption_algorithm_is_aead(encryption_algorithm_t alg)
 		case ENCR_AES_GCM_ICV8:
 		case ENCR_AES_GCM_ICV12:
 		case ENCR_AES_GCM_ICV16:
+		case ENCR_SM4_GCM_ICV16:
 		case ENCR_NULL_AUTH_AES_GMAC:
 		case ENCR_CAMELLIA_CCM_ICV8:
 		case ENCR_CAMELLIA_CCM_ICV12:

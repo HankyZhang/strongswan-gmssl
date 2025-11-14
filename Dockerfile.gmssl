@@ -119,6 +119,13 @@ RUN apt-get update && apt-get install -y \
 
 # 复制默认配置文件
 COPY config/strongswan.conf.gmsm /etc/strongswan.conf
+COPY config/swanctl/swanctl.conf /etc/swanctl/swanctl.conf
+COPY ./deployment-scripts/generate-sm2-certs.sh /tmp/generate-sm2-certs.sh
+
+# 生成 SM2 证书链 (构建阶段一次性完成)
+RUN chmod +x /tmp/generate-sm2-certs.sh \
+    && /tmp/generate-sm2-certs.sh \
+    && rm -f /tmp/generate-sm2-certs.sh
 
 # 配置环境变量
 ENV PATH="${INSTALL_PREFIX}/strongswan/bin:${INSTALL_PREFIX}/strongswan/sbin:${INSTALL_PREFIX}/bin:${PATH}" \

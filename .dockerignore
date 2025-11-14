@@ -24,8 +24,9 @@
 *.swo
 *~
 
-# Deployment scripts (but keep testing/ as it's needed by build)
-deployment-scripts/
+# Deployment scripts: 默认忽略，但保留 SM2 证书生成脚本
+deployment-scripts/*
+!deployment-scripts/generate-sm2-certs.sh
 
 # Temporary files
 tmp/

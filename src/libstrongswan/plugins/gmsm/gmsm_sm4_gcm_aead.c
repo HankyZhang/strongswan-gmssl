@@ -162,7 +162,7 @@ METHOD(aead_t, destroy, void, private_gmsm_sm4_gcm_aead_t *this)
     memwipe(this->salt,sizeof(this->salt)); memwipe(this->h,sizeof(this->h)); free(this);
 }
 
-gmsm_sm4_gcm_aead_t *gmsm_sm4_gcm_aead_create(encryption_algorithm_t algo, size_t key_size, size_t salt_size)
+aead_t *gmsm_sm4_gcm_aead_create(encryption_algorithm_t algo, size_t key_size, size_t salt_size)
 {
     if (algo != ENCR_SM4_GCM_ICV16) return NULL;
     if (key_size == 0) key_size = 16; /* SM4 fixed key size */
@@ -176,5 +176,5 @@ gmsm_sm4_gcm_aead_t *gmsm_sm4_gcm_aead_create(encryption_algorithm_t algo, size_
         .icv_size = 16,
     );
     if (!this->crypter) { destroy(this); return NULL; }
-    return &this->public;
+    return &this->public.aead;
 }

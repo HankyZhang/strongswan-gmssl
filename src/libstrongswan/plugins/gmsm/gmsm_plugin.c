@@ -16,6 +16,7 @@
 #endif
 #include "gmsm_sm3_hasher.h"
 #include "gmsm_sm4_crypter.h"
+#include "gmsm_sm4_gcm_aead.h"
 #include "gmsm_sm2_private_key.h"
 #include "gmsm_sm2_public_key.h"
 #include "gmsm_sm3_signer.h"
@@ -62,6 +63,7 @@ METHOD(plugin_t, get_features, int,
 		/* SM4 GCM AEAD */
 		PLUGIN_REGISTER(AEAD, gmsm_sm4_gcm_aead_create),
 			PLUGIN_PROVIDE(AEAD, ENCR_SM4_GCM_ICV16, 16),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_SM4_CBC, 16),
 		/* SM2 Diffie-Hellman */
 		PLUGIN_REGISTER(KE, gmsm_sm2_dh_create),
 			PLUGIN_PROVIDE(KE, SM2_256),
