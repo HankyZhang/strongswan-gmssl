@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y \
     gperf \
     bison \
     flex \
+    ccache \
     libpam0g-dev \
     libssl-dev \
     libgmp3-dev \
@@ -40,7 +41,9 @@ RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     libcap-ng-dev \
     gettext \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/ccache /usr/local/bin/gcc \
+    && ln -s /usr/bin/ccache /usr/local/bin/g++
 
 # ============ 第二层: 编译安装 GmSSL (GmSSL 版本很少变化) ============
 FROM dependencies AS gmssl-builder
@@ -120,12 +123,8 @@ RUN apt-get update && apt-get install -y \
 # 复制默认配置文件
 COPY config/strongswan.conf.gmsm /etc/strongswan.conf
 COPY config/swanctl/swanctl.conf /etc/swanctl/swanctl.conf
-COPY ./deployment-scripts/generate-sm2-certs.sh /tmp/generate-sm2-certs.sh
-
-# 生成 SM2 证书链 (构建阶段一次性完成)
-RUN chmod +x /tmp/generate-sm2-certs.sh \
-    && /tmp/generate-sm2-certs.sh \
-    && rm -f /tmp/generate-sm2-certs.sh
+COPY ./deployment-scripts/generate-sm2-certs.sh /usr/local/bin/generate-sm2-certs.sh
+RUN chmod +x /usr/local/bin/generate-sm2-certs.sh
 
 # 配置环境变量
 ENV PATH="${INSTALL_PREFIX}/strongswan/bin:${INSTALL_PREFIX}/strongswan/sbin:${INSTALL_PREFIX}/bin:${PATH}" \
@@ -155,6 +154,13 @@ echo "[INFO] 显示版本"\n\
 /usr/local/bin/gmssl version || true\n\
 /usr/local/strongswan/sbin/swanctl --version 2>&1 | head -3 || true\n\
 sysctl -w net.ipv4.ip_forward=1 2>/dev/null || true\n\
+echo "[INFO] 检查 SM2 证书是否存在 (runtime 生成)"\n\
+if [ ! -d /etc/swanctl/sm2 ] || [ -z "$(ls -A /etc/swanctl/sm2 2>/dev/null)" ]; then\n\
+    echo "[INFO] 生成 SM2 证书链..."\n\
+    /usr/local/bin/generate-sm2-certs.sh || echo "[WARN] 证书生成脚本失败"\n\
+else\n\
+    echo "[INFO] 已存在 SM2 证书, 跳过生成"\n\
+fi\n\
 echo "[INFO] 现有连接摘要:"\n\
 if [ -f /etc/swanctl/swanctl.conf ]; then\n\
     grep -E "^\\s+[a-zA-Z0-9_-]+\\s*\\{" /etc/swanctl/swanctl.conf | sed "s/{//" | sed "s/^/  - /" || true\n\
