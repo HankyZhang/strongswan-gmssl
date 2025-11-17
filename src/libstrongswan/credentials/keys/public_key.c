@@ -220,6 +220,8 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 			return OID_ED25519;
 		case SIGN_ED448:
 			return OID_ED448;
+		case SIGN_SM2_WITH_SM3:
+			return OID_SM2_WITH_SM3;
 		case SIGN_BLISS_WITH_SHA2_256:
 		case SIGN_BLISS_WITH_SHA2_384:
 		case SIGN_BLISS_WITH_SHA2_512:
@@ -266,6 +268,7 @@ static struct {
 	{ KEY_ECDSA,   0, { .scheme = SIGN_ECDSA_WITH_SHA512_DER }},
 	{ KEY_ED25519, 0, { .scheme = SIGN_ED25519 }},
 	{ KEY_ED448,   0, { .scheme = SIGN_ED448 }},
+	{ KEY_SM2,     0, { .scheme = SIGN_SM2_WITH_SM3 }},
 };
 
 /**

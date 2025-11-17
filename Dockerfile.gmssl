@@ -58,8 +58,10 @@ RUN cd /tmp \
     && cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
              -DCMAKE_BUILD_TYPE=Release \
              -DENABLE_SM2_PRIVATE=ON \
+             -DSM2_PRIVATE_KEY_EXPORT=ON \
              -DENABLE_SM3=ON \
              -DENABLE_SM4=ON \
+             -DCMAKE_C_FLAGS="-DSM2_PRIVATE_KEY_EXPORT" \
              .. \
     && make -j $(nproc) \
     && make install \

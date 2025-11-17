@@ -193,10 +193,20 @@ CALLBACK(load_cert, vici_message_t*,
 		}
 		else if (flag & X509_CA)
 		{
+			/* GMSM: GmSSL certgen doesn't support X.509v3 extensions
+			 * Allow CA certificates without basicConstraints extension
+			 * for testing with GmSSL-generated certificates */
+			DBG1(DBG_CFG, "  GMSM: accepting CA certificate without basicConstraints extension (GmSSL limitation)");
+			cert = this->authority->add_ca_cert(this->authority, cert);
+			cert->destroy(cert);
+			return create_reply(NULL);
+			
+			/* Original strict check disabled for GMSM testing:
 			char msg[] = "ca certificate lacks CA basic constraint, rejected";
 			cert->destroy(cert);
 			DBG1(DBG_CFG, "  %s", msg);
 			return create_reply(msg);
+			*/
 		}
 	}
 

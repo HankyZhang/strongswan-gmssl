@@ -1437,8 +1437,21 @@ static bool parse_certificate(private_x509_cert_t *this)
 			case X509_OBJ_SIG_ALG:
 				if (!signature_params_parse(object, level, &sig_alg))
 				{
-					DBG1(DBG_ASN, "  unable to parse signature algorithm");
-					goto end;
+					/* Fallback: sm2sign-with-sm3 OID DER sequence (1.2.156.10197.1.501)
+					 * Actual OID bytes: 2A 81 1C CF 55 01 83 75 (8 bytes)
+					 * Tag=0x06, length=0x08 -> DER: 06 08 2A 81 1C CF 55 01 83 75
+					 */
+					static const uint8_t sm2_sig_oid_der[] = {0x06,0x08,0x2A,0x81,0x1C,0xCF,0x55,0x01,0x83,0x75};
+					if (memmem(object.ptr, object.len, sm2_sig_oid_der, sizeof(sm2_sig_oid_der)))
+					{
+						DBG1(DBG_ASN, "detected SM2 signature OID via fallback in tbsCertificate");
+						sig_alg.scheme = SIGN_SM2_WITH_SM3;
+					}
+					else
+					{
+						DBG1(DBG_ASN, "  unable to parse signature algorithm");
+						goto end;
+					}
 				}
 				break;
 			case X509_OBJ_ISSUER:
@@ -1483,9 +1496,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 					if (alg_oid != OID_UNKNOWN)
 					{
 						int curve_oid = asn1_known_oid(params);
-						if (curve_oid == OID_SM2_CURVE)
+						if (curve_oid == OID_SM2P256V1)
 						{
-							DBG1(DBG_ASN, "SM2 curve detected via AlgorithmIdentifier params OID_SM2_CURVE, retry with KEY_SM2");
+							DBG1(DBG_ASN, "SM2 curve detected via AlgorithmIdentifier params OID_SM2P256V1, retry with KEY_SM2");
 							DESTROY_IF(this->public_key);
 							this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 									KEY_SM2, BUILD_BLOB_ASN1_DER, object, BUILD_END);
@@ -1631,10 +1644,10 @@ static bool parse_certificate(private_x509_cert_t *this)
 				if (!signature_params_parse(object, level, this->scheme))
 				{
 					/* Fallback: sm2sign-with-sm3 OID DER sequence (1.2.156.10197.1.501)
-					 * Actual OID bytes after tag/length: 2A 81 1C D0 37 65 01 F5 (8 bytes)
-					 * Tag=0x06, length=0x08 -> total 10 bytes
+					 * Actual OID bytes: 2A 81 1C CF 55 01 83 75 (8 bytes)
+					 * Tag=0x06, length=0x08 -> DER: 06 08 2A 81 1C CF 55 01 83 75
 					 */
-					static const uint8_t sm2_sig_oid_der[] = {0x06,0x08,0x2A,0x81,0x1C,0xD0,0x37,0x65,0x01,0xF5};
+					static const uint8_t sm2_sig_oid_der[] = {0x06,0x08,0x2A,0x81,0x1C,0xCF,0x55,0x01,0x83,0x75};
 					if (memmem(object.ptr, object.len, sm2_sig_oid_der, sizeof(sm2_sig_oid_der)))
 					{
 						DBG1(DBG_ASN, "detected SM2 signature OID via fallback");
