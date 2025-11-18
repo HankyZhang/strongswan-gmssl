@@ -1,10 +1,10 @@
 #!/bin/bash
-# Deploy strongSwan Server (101.126.148.5)
+# Deploy strongSwan Server (182.92.77.234)
 # Run this script on the server machine
 
 set -e
 
-SERVER_IP="101.126.148.5"
+SERVER_IP="182.92.77.234"
 CLIENT_IP="8.140.37.32"
 
 echo "=========================================="
@@ -46,9 +46,9 @@ cd /tmp
 gmssl sm2keygen -pass 123456 -out ca-key.pem
 gmssl certgen -C CN -O 'GMSM VPN CA' -CN 'GMSM Root CA' -days 3650 -key ca-key.pem -pass 123456 -out ca.pem
 
-# Generate server certificate (101.126.148.5)
+# Generate server certificate (182.92.77.234)
 gmssl sm2keygen -pass 123456 -out server-key.pem
-gmssl reqgen -C CN -O 'VPN Server' -CN 'vpn-server-101.126.148.5' -key server-key.pem -pass 123456 -out server.req
+gmssl reqgen -C CN -O 'VPN Server' -CN 'vpn-server-182.92.77.234' -key server-key.pem -pass 123456 -out server.req
 gmssl reqsign -in server.req -days 365 -cacert ca.pem -key ca-key.pem -pass 123456 -out server.crt
 
 # Generate client certificate (8.140.37.32)
