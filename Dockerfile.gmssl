@@ -1,0 +1,226 @@
+# ==============================================================================
+# Dockerfile for strongSwan with GmSSL (National Cryptographic Algorithms)
+# 支持国密算法: SM2/SM3/SM4
+# Base: Ubuntu 22.04
+# 优化构建: 使用层缓存加速重复构建
+# ==============================================================================
+
+FROM ubuntu:22.04 AS base
+
+LABEL maintainer="HankyZhang" \
+      description="strongSwan with GmSSL - National Cryptographic Algorithms Support" \
+      version="gmssl-3.1.1" \
+      algorithms="SM2,SM3,SM4,AES,SHA2"
+
+# 环境变量
+ENV DEBIAN_FRONTEND=noninteractive \
+    GMSSL_VERSION=3.1.1 \
+    STRONGSWAN_REPO=https://github.com/HankyZhang/strongswan-gmssl.git \
+    STRONGSWAN_BRANCH=master \
+    INSTALL_PREFIX=/usr/local
+
+# ============ 第一层: 安装系统依赖 (很少变化,可以长期缓存) ============
+FROM base AS dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    autoconf \
+    automake \
+    libtool \
+    pkg-config \
+    gperf \
+    bison \
+    flex \
+    ccache \
+    libpam0g-dev \
+    libssl-dev \
+    libgmp3-dev \
+    libsystemd-dev \
+    libcurl4-openssl-dev \
+    libcap-ng-dev \
+    gettext \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/ccache /usr/local/bin/gcc \
+    && ln -s /usr/bin/ccache /usr/local/bin/g++
+
+# ============ 第二层: 编译安装 GmSSL (GmSSL 版本很少变化) ============
+FROM dependencies AS gmssl-builder
+
+RUN cd /tmp \
+    && wget -q https://github.com/guanzhi/GmSSL/archive/refs/tags/v${GMSSL_VERSION}.tar.gz \
+        -O gmssl-${GMSSL_VERSION}.tar.gz \
+    && tar -zxf gmssl-${GMSSL_VERSION}.tar.gz \
+    && cd GmSSL-${GMSSL_VERSION} \
+    && mkdir -p build \
+    && cd build \
+    && cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
+             -DCMAKE_BUILD_TYPE=Release \
+             -DENABLE_SM2_PRIVATE=ON \
+             -DSM2_PRIVATE_KEY_EXPORT=ON \
+             -DENABLE_SM3=ON \
+             -DENABLE_SM4=ON \
+             -DCMAKE_C_FLAGS="-DSM2_PRIVATE_KEY_EXPORT" \
+             .. \
+    && make -j $(nproc) \
+    && make install \
+    && ldconfig \
+    && rm -rf /tmp/GmSSL-${GMSSL_VERSION} /tmp/gmssl-${GMSSL_VERSION}.tar.gz
+
+# ============ 第三层: 编译 strongSwan (代码经常变化,使用 --build-arg 控制缓存) ============
+FROM gmssl-builder AS strongswan-builder
+ARG CACHE_BUST=5
+
+# 复制本地代码到容器 (使用修改后的代码)
+COPY . /tmp/strongswan-gmssl
+
+RUN echo "Cache bust: ${CACHE_BUST}" \
+    && cd /tmp/strongswan-gmssl \
+    && echo "[INFO] Verify GMSM keywords in source" \
+    && grep -i "sm4gcm16\|prfsm3" src/libstrongswan/crypto/proposal/proposal_keywords_static.txt \
+    && echo "[INFO] Running autoreconf to ensure regenerated build files (including gperf outputs)" \
+    && autoreconf -f -i \
+    && dos2unix scripts/* 2>/dev/null || true \
+    && dos2unix src/libstrongswan/asn1/oid.txt 2>/dev/null || true \
+    && dos2unix src/libstrongswan/crypto/proposal/proposal_keywords_static.txt 2>/dev/null || true \
+    && rm -f src/libstrongswan/crypto/proposal/proposal_keywords_static.c \
+    && touch src/libstrongswan/crypto/proposal/proposal_keywords_static.txt \
+    && ./configure --prefix=${INSTALL_PREFIX}/strongswan \
+        --sysconfdir=/etc \
+        --enable-eap-identity \
+        --enable-eap-md5 \
+        --enable-eap-mschapv2 \
+        --enable-eap-tls \
+        --enable-dhcp \
+        --enable-openssl \
+        --enable-swanctl \
+        --enable-vici \
+        --enable-kernel-netlink \
+        --enable-gmsm \
+        --enable-sha1 \
+        --enable-sha2 \
+        --enable-nonce \
+        --enable-random \
+        --enable-x509 \
+        --enable-pem \
+        --enable-pkcs1 \
+        --enable-pkcs8 \
+        --enable-pkcs12 \
+        --enable-pubkey \
+        --enable-hmac \
+        --enable-xcbc \
+        --enable-cmac \
+        --with-gmssl=${INSTALL_PREFIX} \
+        PKG_CONFIG_PATH=${INSTALL_PREFIX}/lib/pkgconfig \
+    && echo "[INFO] Building with make (gperf should run automatically)" \
+    && make -j $(nproc) \
+    && echo "[INFO] Verifying generated proposal_keywords_static.c" \
+    && if [ -f src/libstrongswan/crypto/proposal/proposal_keywords_static.c ]; then \
+           echo "File exists, checking for GMSM keywords:"; \
+           grep -c "sm4gcm16\|prfsm3" src/libstrongswan/crypto/proposal/proposal_keywords_static.c || echo "WARNING: GMSM keywords NOT found in generated file"; \
+           echo "First 20 lines of generated file:"; \
+           head -20 src/libstrongswan/crypto/proposal/proposal_keywords_static.c; \
+       else \
+           echo "ERROR: proposal_keywords_static.c was not generated!"; \
+           exit 1; \
+       fi \
+    && make install \
+    && echo "[INFO] Build complete! GMSM keywords verified in generated proposal_keywords_static.c" \
+    && echo "[INFO] Verifying installed libstrongswan" \
+    && find ${INSTALL_PREFIX}/strongswan -name "libstrongswan*.so*" -type f \
+    && rm -rf /tmp/strongswan-gmssl
+
+# ============ 最终镜像: 安装运行时工具 ============
+FROM base AS final
+COPY --from=strongswan-builder ${INSTALL_PREFIX} ${INSTALL_PREFIX}
+
+# 安装运行时依赖 (不需要编译工具)
+RUN apt-get update && apt-get install -y \
+    iptables \
+    iproute2 \
+    net-tools \
+    vim \
+    iputils-ping \
+    curl \
+    libssl3 \
+    libsystemd0 \
+    libcurl4 \
+    coreutils \
+    && rm -rf /var/lib/apt/lists/* \
+    && ldconfig
+
+# 复制默认配置文件
+COPY config/strongswan.conf /etc/strongswan.conf
+
+# 配置环境变量
+ENV PATH="${INSTALL_PREFIX}/strongswan/bin:${INSTALL_PREFIX}/strongswan/sbin:${INSTALL_PREFIX}/bin:${PATH}" \
+    LD_LIBRARY_PATH="${INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH}" \
+    PKG_CONFIG_PATH="${INSTALL_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+
+# 创建配置目录
+RUN mkdir -p /etc/swanctl/x509 \
+             /etc/swanctl/x509ca \
+             /etc/swanctl/x509sm2 \
+             /etc/swanctl/private \
+             /etc/swanctl/rsa \
+             /etc/swanctl/sm2 \
+             /etc/swanctl/conf.d \
+    && chmod 700 /etc/swanctl/private \
+    && chmod 700 /etc/swanctl/sm2
+
+# 创建符号链接方便使用
+RUN ln -sf /usr/local/strongswan/sbin/swanctl /usr/local/bin/swanctl && \
+    ln -sf /usr/local/strongswan/sbin/charon-cmd /usr/local/bin/charon-cmd
+
+# 创建启动脚本
+RUN printf '#!/bin/bash\n\
+set -e\n\
+echo "============================================================"\n\
+echo " strongSwan + GmSSL 容器启动"\n\
+echo "============================================================"\n\
+mkdir -p /var/run /var/log\n\
+chmod 755 /var/run\n\
+echo "[INFO] 显示版本"\n\
+/usr/local/bin/gmssl version || true\n\
+/usr/local/strongswan/sbin/swanctl --version 2>&1 | head -3 || true\n\
+sysctl -w net.ipv4.ip_forward=1 2>/dev/null || true\n\
+echo "[INFO] 检查 SM2 证书是否存在 (runtime 生成)"\n\
+if [ ! -d /etc/swanctl/sm2 ] || [ -z "$(ls -A /etc/swanctl/sm2 2>/dev/null)" ]; then\n\
+    echo "[INFO] 生成 SM2 证书链..."\n\
+    /usr/local/bin/generate-sm2-certs.sh || echo "[WARN] 证书生成脚本失败"\n\
+else\n\
+    echo "[INFO] 已存在 SM2 证书, 跳过生成"\n\
+fi\n\
+echo "[INFO] 现有连接摘要:"\n\
+if [ -f /etc/swanctl/swanctl.conf ]; then\n\
+    grep -E "^\\s+[a-zA-Z0-9_-]+\\s*\\{" /etc/swanctl/swanctl.conf | sed "s/{//" | sed "s/^/  - /" || true\n\
+else\n\
+    echo "  (无 swanctl.conf)"\n\
+fi\n\
+echo "[INFO] 直接启动 charon (无需 starter)"\n\
+/usr/local/strongswan/libexec/ipsec/charon --debug-dmn 1 --debug-ike 1 --debug-lib 2 --debug-cfg 1 --debug-asn 2 --debug-enc 1 --debug-chd 1 --debug-net 1 --debug-knl 1 2>&1 | tee /var/log/charon.log &\n\
+sleep 3\n\
+if [ -S /var/run/charon.vici ]; then\n\
+    echo "[INFO] VICI socket 就绪, 加载凭据"\n\
+    swanctl --load-creds || true\n\
+    echo "[INFO] 列出证书"\n\
+    swanctl --list-certs || true\n\
+else\n\
+    echo "[ERROR] VICI socket 未就绪"\n\
+    ls -l /var/run || true\n\
+fi\n\
+echo "[INFO] 保持前台 (tail charon.log)"\n\
+tail -f /var/log/charon.log 2>/dev/null\n\
+' > /start.sh \
+        && chmod +x /start.sh
+
+# 暴露端口
+EXPOSE 500/udp 4500/udp
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD pgrep charon || exit 1
+
+# 启动命令
+CMD ["/start.sh"]

@@ -1,0 +1,10 @@
+strongSwan Project Contributors
+================================
+
+This strongSwan-gmssl fork includes:
+- Original strongSwan project contributors
+- GmSSL integration by HankyZhang
+- National Cryptographic Algorithms support (SM2/SM3/SM4)
+
+For the complete list of strongSwan contributors, see:
+https://github.com/strongswan/strongswan/blob/master/AUTHORS

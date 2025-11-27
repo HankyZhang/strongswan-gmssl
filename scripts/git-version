@@ -1,0 +1,34 @@
+#!/bin/sh
+# git-version: derive a descriptive version string, but never fail.
+# Fallback order:
+#  1. .tarball-git-version content if present
+#  2. git describe output (excluding android-* tags)
+#  3. strongSwan package version from configure.ac (AC_INIT line)
+#  4. Static default "6.0.3dr1"
+# This prevents configure from erroring when git metadata is missing.
+
+SRCDIR=$1
+TARBALL="$SRCDIR/.tarball-git-version"
+
+if [ -f "$TARBALL" ]; then
+	V=$(cat "$TARBALL")
+elif [ -d "$SRCDIR/.git" ]; then
+	V=$(git -C "$SRCDIR" describe --exclude 'android-*' --tags HEAD 2>/dev/null)
+fi
+
+if [ -z "$V" ]; then
+	# Try to extract AC_INIT version (first bracket pair second item)
+	AC_LINE=$(grep -m1 'AC_INIT' "$SRCDIR/configure.ac" 2>/dev/null)
+	if echo "$AC_LINE" | grep -q 'AC_INIT'; then
+		PKG_VER=$(echo "$AC_LINE" | sed -n "s/.*AC_INIT(\[[^]]*\],\[\([^]]*\)\].*/\1/p")
+		if [ -n "$PKG_VER" ]; then
+			V="$PKG_VER"
+		fi
+	fi
+fi
+
+if [ -z "$V" ]; then
+	V="6.0.3dr1"
+fi
+
+echo "$V"

@@ -1,0 +1,62 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation (keep docs/ as it may contain man pages needed by build)
+
+# Build artifacts
+*.o
+*.lo
+*.la
+*.so
+*.a
+.libs/
+.deps/
+*.tar.gz
+*.tar
+*.zip
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Deployment scripts: 默认忽略，但保留 SM2 证书生成脚本
+deployment-scripts/*
+!deployment-scripts/generate-sm2-certs.sh
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Large binary files
+*.exe
+*.dll
+*.dylib
+
+# Package files that are not needed
+strongswan-gmssl-*.tar*
+gmsm-plugin.tar.gz
+
+# Config backups
+*.bak
+*.backup
+
+# Logs
+*.log
+logs/
+
+# Node modules if any
+node_modules/

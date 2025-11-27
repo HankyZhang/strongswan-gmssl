@@ -1,0 +1,58 @@
+name: macOS
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TESTS_REDUCED_KEYLENGTHS: yes
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPRESS: true
+  CCACHE_MAXSIZE: 100M
+  OS_NAME: macos
+
+jobs:
+  pre-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip-check.outputs.should_skip }}
+    steps:
+      - id: skip-check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          concurrent_skipping: 'same_content_newer'
+
+  macos:
+    strategy:
+      matrix:
+        os: [macos-latest, macos-14]
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      TEST: macos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+      # workaround for conflict between Python installed in the image and via brew
+      - run: find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete -print
+      - run: |
+          brew install ccache
+          echo "PATH=$(brew --prefix)/opt/ccache/libexec:$PATH" >> $GITHUB_ENV
+          ccache -z
+      - uses: ./.github/actions/default
+      - run: ccache -s
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Logs ${{ github.job }}
+          path: config.log
+          retention-days: 5

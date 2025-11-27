@@ -1,0 +1,200 @@
+name: Linux
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # this test case does not actually test anything but tries to access system
+  # directories that might be inaccessible on build hosts
+  TESTS_CASES_EXCLUDE: sw_collector
+  TESTS_REDUCED_KEYLENGTHS: yes
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPRESS: true
+  CCACHE_MAXSIZE: 200M
+  OS_NAME: linux
+
+jobs:
+  pre-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip-check.outputs.should_skip }}
+    steps:
+      - id: skip-check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          concurrent_skipping: 'same_content_newer'
+
+  latest:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    strategy:
+      matrix:
+        test: [ all, default, printf-builtin ]
+        compiler: [ gcc, clang ]
+        leak-detective: [ no, yes ]
+        monolithic: [ no, yes ]
+        exclude:
+          # leaks will show up whether we build monolithic or not
+          - leak-detective: yes
+            monolithic: yes
+          # monolithic builds don't affect the printf-hook implementation
+          - test: printf-builtin
+            monolithic: yes
+        include:
+          - test: apidoc
+          - test: coverage
+          - test: dist
+          - test: nm
+          - test: no-dbg
+          - test: no-dbg
+            compiler: clang
+          - test: no-testable-ke
+          - test: no-testable-ke
+            compiler: clang
+          - test: fuzzing
+            compiler: clang
+            monolithic: yes
+    env:
+      LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
+      MONOLITHIC: ${{ matrix.monolithic || 'no' }}
+      CC: ${{ matrix.compiler || 'gcc' }}
+      TEST: ${{ matrix.test }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          # with regards to ccache, monolithic builds don't differ from regular
+          # builds and, similarly, builds with leak-detective only differ in two
+          # files (LD itself and library.c); but different tests build different
+          # dependencies, so different caches are needed
+          key: ccache-ubuntu-latest-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
+          restore-keys: |
+            ccache-ubuntu-latest-${{ env.CC }}-${{ matrix.test }}-
+            ccache-ubuntu-latest-${{ env.CC }}-
+      - run: |
+          sudo apt-get install -qq ccache
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+          ccache -z
+      - uses: ./.github/actions/default
+      - run: ccache -s
+      - if: ${{ success() && matrix.test == 'coverage' }}
+        uses: codecov/codecov-action@v4
+        with:
+          disable_search: true
+          fail_ci_if_error: true
+          file: coverage/coverage.cleaned.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Logs ${{ github.job }}
+          path: config.log
+          retention-days: 5
+
+  crypto:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        test: [ botan, wolfssl, openssl, openssl-3, openssl-awslc, gcrypt ]
+        os: [ ubuntu-latest, ubuntu-22.04 ]
+        leak-detective: [ no, yes ]
+        exclude:
+          # test custom-built libs only on the latest platform
+          - os: ubuntu-22.04
+            test: botan
+          - os: ubuntu-22.04
+            test: wolfssl
+          - os: ubuntu-22.04
+            test: openssl-3
+          - os: ubuntu-22.04
+            test: openssl-awslc
+    env:
+      LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
+      CC: ${{ matrix.compiler || 'gcc' }}
+      TEST: ${{ matrix.test }}
+      ACTIVE_TRANSFORMS_REF: .github/active-transforms/${{ matrix.test }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          # path is different on newer systems
+          path: |
+            ~/.cache/ccache
+            ~/.ccache
+          key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-
+            ccache-${{ matrix.os }}-${{ env.CC }}-all-${{ github.sha }}
+            ccache-${{ matrix.os }}-${{ env.CC }}-all-
+            ccache-${{ matrix.os }}-${{ env.CC }}-
+      - run: |
+          sudo apt-get install -qq ccache
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+          ccache -z
+          echo "TESTS_ACTIVE_TRANSFORMS=$HOME/active-transforms.log" >> $GITHUB_ENV
+      - uses: ./.github/actions/default
+      - name: Upload active transforms
+        uses: actions/upload-artifact@v4
+        with:
+          name: active-transforms-${{ matrix.test }}-${{ matrix.os }}-${{ matrix.leak-detective }}
+          path: ${{ env.TESTS_ACTIVE_TRANSFORMS }}
+          retention-days: 5
+      - name: Verify active transforms
+        run: |
+          test ! -f $ACTIVE_TRANSFORMS_REF || diff -u --color=always $ACTIVE_TRANSFORMS_REF $TESTS_ACTIVE_TRANSFORMS
+      - run: ccache -s
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Logs ${{ github.job }}
+          path: config.log
+          retention-days: 5
+
+  older:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04 ]
+        test: [ all, nm ]
+        compiler: [ gcc, clang ]
+        exclude:
+          - test: nm
+            compiler: clang
+    env:
+      LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
+      CC: ${{ matrix.compiler || 'gcc' }}
+      TEST: ${{ matrix.test }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          # path is different on newer systems
+          path: |
+            ~/.cache/ccache
+            ~/.ccache
+          key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-
+            ccache-${{ matrix.os }}-${{ env.CC }}-
+      - run: |
+          sudo apt-get install -qq ccache
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+          ccache -z
+      - uses: ./.github/actions/default
+      - run: ccache -s
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Logs ${{ github.job }}
+          path: config.log
+          retention-days: 5
